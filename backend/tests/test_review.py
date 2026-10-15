@@ -90,3 +90,24 @@ def test_dependency_impact_must_cite_a_consumer_of_the_changed_service(conn, org
     review = draft_review(conn, org, provider(responder), "customer-portal", 57)
     assert review["comments"] == []
     assert any("consumer" in d["reason"] for d in review["dropped"])
+
+
+def test_reuse_opportunity_needs_a_reuse_finding_and_dependency_impact_is_deduplicated(conn, org):
+    def responder(p):
+        reuse = p["reuse"][0] if p["reuse"] else None
+        consumers = [d for d in p["dependency_impact"] if d["relation"] == "depends_on_changed_service"]
+        out = [{"type": "reuse_opportunity", "file": "", "quote": "", "evidence": [p["decisions"][0]["id"]],
+                "comment": "Reuse something (cites a decision, not a reuse finding)."}]
+        if reuse:
+            out.append({"type": "reuse_opportunity", "file": "", "quote": "", "evidence": [reuse["id"]],
+                        "comment": "Use the existing IdempotencyStore instead of a new de-dupe store."})
+        for d in consumers[:2]:
+            out.append({"type": "dependency_impact", "file": "", "quote": "", "evidence": d["evidence"],
+                        "comment": f"Check compatibility for {d['service']}."})
+        return {"comments": out, "nothing_to_say": False}
+
+    review = draft_review(conn, org, provider(responder), "notify-svc", 48)
+    kinds = [c["type"] for c in review["comments"]]
+    assert kinds.count("reuse_opportunity") == 1 and "IdempotencyStore" in review["comments"][0]["comment"]
+    assert kinds.count("dependency_impact") <= 1
+    assert any("does not cite a reuse finding" in d["reason"] for d in review["dropped"])

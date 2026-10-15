@@ -10,6 +10,7 @@ Also, one-time ask at the next milestone (dev-only partial B): review of the OSS
 `excluded_subjects`, which are **agent-confirmed, not human-reviewed**.
 
 ## Log (UTC, server clock)
+- 2026-10-15 20:40 — PR review: reuse findings added to the packet (a duplicate-implementation PR now gets a reuse_opportunity comment, which must cite a reuse finding); at most one dependency-impact note per PR, phrased as something to verify, because without diffs an asserted effect would be a guess. Checked on Northwind dev PRs only.
 - 2026-10-15 20:10 — Owner answered (Telegram): go with the recommendation = NO. Backup key is NOT used for index embeddings; plan A and its schedule (full coverage Oct 19 00:05 UTC) stay as pinned. `EMBED_BACKUP_FOR_INDEX` stays off.
 - 2026-10-15 20:05 — Owner supplied a backup Gemini key (another project): stored in ~/.config/lore/gemini.env (mode 600, not in git). Wired as fallback for generation and for QUERY embeddings; INDEX embeddings stay on the primary key (plan A unchanged) pending owner's answer, since using it would speed the pinned schedule.
 - 2026-10-15 19:55 — Dev scoring wired to eval/oss_dev_lists.json (required / excluded / unlisted-review; excluded_subjects on dev only). Lists are **agent-confirmed, not human-reviewed**, as delegated by the owner; reports say so; one review request at the next milestone. Held-out scoring is NOT wired (needs frozen prompts + complete embeddings).

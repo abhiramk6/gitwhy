@@ -146,7 +146,10 @@ PR_REVIEW = {
         "replaced it; (4) if the description records an override for a decision, do not report that violation; "
         "(5) 'ownership_risk' only when the facts show the changed code is concentrated in one person or has no "
         "active owner; (6) 'dependency_impact' only for services that actually depend on the changed one, named "
-        "in the packet; (7) 'runbook_reminder' only when a runbook in the packet governs what is being changed; "
+        "in the packet, and at most ONE such comment listing them; phrase it as something to check if the change "
+        "touches the service's interface or behaviour, never as a fact that behaviour changes; (7) "
+        "'reuse_opportunity' when a reuse finding says the pull request re-implements something that already "
+        "exists: name the existing component to use; (7b) 'runbook_reminder' only when a runbook in the packet governs what is being changed; "
         "(8) do not praise, summarise the diff or restate the description; (9) you only see file names, not the "
         "diff: never make claims about specific lines or code you were not shown; `file` must be one of the "
         "changed files or empty."),

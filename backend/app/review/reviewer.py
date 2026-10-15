@@ -30,7 +30,7 @@ from ..planning.planner import Evidence, _label_for, _valid
 from ..retrieval.search import search_with_meta
 
 TYPES = {"decision_violation", "superseded_reference", "ownership_risk", "dependency_impact", "runbook_reminder",
-         "missing_override", "other"}
+         "missing_override", "reuse_opportunity", "other"}
 EVIDENCE_BUDGET_CHARS = 30_000
 _WS = re.compile(r"\s+")
 
@@ -70,7 +70,7 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
         "SELECT source_id, body FROM source_records WHERE organization_id=%s AND source_type='adr'", (org_id,))}
 
     decisions, decision_text = [], {}
-    others = {"existing_findings": [], "ownership": []}
+    others = {"existing_findings": [], "ownership": [], "reuse": []}
     for f in conn.execute("SELECT * FROM facts WHERE organization_id=%s AND status IN ('active','candidate','superseded') "
                           "ORDER BY id", (org_id,)):
         if f["fact_type"] == "decision":
@@ -85,6 +85,9 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
             eid = ev.add(f"fact:{f['id']}", f["fact_type"], f["summary"], f["source_url"], f["evidence_type"], f["status"])
             others["existing_findings"].append({"id": eid, "type": f["fact_type"], "predicate": f["predicate"],
                                                 "status": f["status"], "summary": f["summary"]})
+        elif f["fact_type"] == "reuse" and f["repository_id"] == repo_id and f["status"] in ("active", "candidate"):
+            eid = ev.add(f"fact:{f['id']}", "reuse", f["summary"], f["source_url"], f["evidence_type"], f["status"])
+            others["reuse"].append({"id": eid, "summary": f["summary"], "status": f["status"]})
         elif f["fact_type"] in ("ownership", "risk") and f["repository_id"] == repo_id and f["status"] in ("active", "candidate"):
             eid = ev.add(f"fact:{f['id']}", f["fact_type"], f["summary"], f["source_url"], f["evidence_type"], f["status"])
             others["ownership"].append({"id": eid, "type": f["fact_type"], "summary": f["summary"], "status": f["status"]})
@@ -144,6 +147,13 @@ def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo
             if not any(_fits(c.get("quote", ""), aux["decision_text"][i]) for i in cited):
                 dropped.append({"reason": "quote not found in the cited decision", "comment": c.get("comment", "")[:120]})
                 continue
+        if ctype == "reuse_opportunity" and not any(ev.items[i]["kind"] == "reuse" for i in ids):
+            dropped.append({"reason": "reuse suggestion does not cite a reuse finding", "comment": c.get("comment", "")[:120]})
+            continue
+        if ctype == "dependency_impact" and any(x["type"] == "dependency_impact" for x in comments):
+            dropped.append({"reason": "duplicate dependency impact (one blast-radius note per PR)",
+                            "comment": c.get("comment", "")[:120]})
+            continue
         if ctype == "dependency_impact":
             # Impact means CONSUMERS of the changed service: a cited edge must end at it (X depends on <repo>).
             if not any(i.startswith("edge:") and i.rsplit("->", 1)[-1] == repo for i in ids):
@@ -179,7 +189,7 @@ def render(review: dict) -> str:
         return "\n".join(head + ["Not generated: review drafting needs an LLM and no cached judgment exists.", ""])
     pv = review["provenance"]
     body = [f"**{review['title']}**", "",
-            f"Provider `{pv['provider']}` · model `{pv['model']}` · search `{pv['search_mode']}` · live calls "
+            f"Provider `{pv["provider"]}` · model `{pv['model']}` · search `{pv['search_mode']}` · live calls "
             f"{pv['model_calls_live']} · replayed {pv['replayed']} · comments {len(review['comments'])} · "
             f"discarded {len(review['dropped'])}", f"_Limitations: {pv['limitations']}_", ""]
     if not review["comments"]:
