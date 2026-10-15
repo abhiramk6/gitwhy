@@ -486,7 +486,10 @@ def build_prs(jira: list[dict]) -> list[dict]:
     add("ledger-core", 30, "Reconcile: stream settlement file", "dana.okafor", date(2026, 4, 18),
         ["ledger/reconcile.py"], "Partial work; see LED-71.", ["LED-71"], ["priya.raman"])
     # filler PRs round-robin per repo (balanced authorship)
-    keys = [t["key"] for t in jira if t["status"] == "Done"]
+    proj = {"payments-api": "PAY", "ledger-core": "LED", "notify-svc": "NTF", "customer-portal": "POR",
+            "platform-libs": "PLT"}
+    done_by_proj = {pr_: sorted(t["key"] for t in jira if t["status"] == "Done" and t["project"] == pr_)
+                    for pr_ in proj.values()}
     seq = 0
     for repo, pool in REPO_TEAM_POOL.items():
         files = source_files(repo)
@@ -502,7 +505,7 @@ def build_prs(jira: list[dict]) -> list[dict]:
             else:
                 files_i = [files[i % len(files)]]
             add(repo, number, f"{repo}: improve {files_i[0].split('/')[-1]} ({seq})", author, when, files_i,
-                "Routine change.", [keys[seq % len(keys)]])
+                "Routine change.", [done_by_proj[proj[repo]][i % len(done_by_proj[proj[repo]])]])
     return prs
 
 
