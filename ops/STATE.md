@@ -3,19 +3,21 @@
 Updated: 2026-10-15
 
 ## Done
-- Environment probed: headless Ubuntu 24.04, 3.8 GB RAM, 47 GB disk; git + python3 + curl only.
-- Cleaned plan written: docs/PLAN.md
-- Telegram scaffolding written: ops/notify.sh, ops/get_chat_id.sh (waiting for bot token)
+- Plan cleaned (docs/PLAN.md); decisions D1-D10 logged (docs/decisions.md) incl. LORE audit.
+- Toolchain installed: Postgres 16 + pgvector 0.6.0, Node 18, gcloud, gh, tmux, Python venv (backend/.venv).
+- Stage 0 foundation: migrations/001_init.sql, FastAPI /health + /health/db, 5 passing tests (idempotent migrations).
+- Telegram: group "Cb" paired; tmux session `lore` (agent + bridge + shell).
 
-## Blocked on owner
-- Telegram bot token (BotFather)
-- GCP account + free-trial activation (phone + card)
-- GitHub account (private repo)
-- Decisions D1-D8 confirmation
+## Blocked on owner (via Telegram)
+- Rotate bot token; GitHub login (private repo); GCP free-trial + gcloud login; collaborator usernames.
 
-## Next (once unblocked)
-1. Install toolchain: node, gcloud, gh, postgres+pgvector (local), docker if needed
-2. Stage 0 foundation
+## Next
+- Stage 1: synthetic org generator + deterministic validator (5 repos, ~40 tickets, ~60 PRs, 6 ADRs, 8 scenarios).
+- Stage 2: idempotent ingestion + cursors (local), then Stage 3 graph.
+
+## Local run
+- `set -a; source ~/.config/lore/db.env; set +a; cd backend; .venv/bin/python -m pytest -q`
+- `.venv/bin/python -m app.db` (migrate), `.venv/bin/uvicorn app.main:app`
 
 ## Channel
 - Telegram is the primary channel (bot @<project bot>, owner chat paired 2026-10-15).
