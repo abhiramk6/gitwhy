@@ -45,3 +45,29 @@ def test_tally_skipped_is_not_a_pass():
     bad = Tally()
     bad.add("FAIL")
     assert bad.exit_code == 1
+
+
+def test_request_sizing_preserves_every_text_in_order():
+    from app.models.provider import GeminiProvider
+
+    g = GeminiProvider.__new__(GeminiProvider)
+    texts = [f"{i}:" + "x" * (50 + (i * 997) % 9000) for i in range(300)] + ["y" * 40_000]  # one oversized text
+    reqs = list(g._requests(texts))
+    assert [t for r in reqs for t in r] == texts          # nothing dropped, merged or reordered
+    assert all(len(r) <= 50 for r in reqs)
+    assert all(sum(map(len, r)) <= g.EMBED_REQUEST_CHARS or len(r) == 1 for r in reqs)  # only a lone text may exceed
+
+
+def test_reconcile_reports_missing_and_orphans(conn):
+    from app.retrieval.embed import embed_org, reconcile
+    from app.models.testing import ScriptedProvider
+
+    org = conn.execute("INSERT INTO organizations (slug, name, is_synthetic) VALUES ('rec','rec',true) RETURNING id").fetchone()["id"]
+    conn.execute("INSERT INTO source_records (organization_id, source_type, source_id, title, body, payload, content_hash) "
+                 "VALUES (%s,'doc','a','A','alpha text','{}','h1'), (%s,'doc','b','B','','{}','h2')", (org, org))
+    prov = ScriptedProvider(semantic=True)
+    assert reconcile(conn, org, prov.embed_model)["missing"] != []
+    embed_org(conn, org, prov)
+    r = reconcile(conn, org, prov.embed_model)
+    assert r["wanted"] == r["stored"] == 2 and not r["missing"] and not r["orphaned"]
+    assert r["title_only_empty_body"] == 1               # the empty-body record is embedded title-only, and counted

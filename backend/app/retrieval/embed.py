@@ -20,10 +20,10 @@ def _vec(v: list[float]) -> str:
     return "[" + ",".join(f"{x:.6f}" for x in v) + "]"
 
 
-def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider) -> dict:
-    if not provider.semantic_embeddings:
-        return {"candidates": 0, "embedded": 0, "cached": 0, "skipped": "provider has no semantic embeddings"}
-    want: dict[tuple[str, int, int], tuple[str, int, int, str]] = {}  # (table,id,chunk) -> (hash,start,end,text)
+def wanted_chunks(conn: psycopg.Connection, org_id: int) -> dict[tuple[str, int, int], tuple[str, int, int, str]]:
+    """Every chunk that must have a vector: (table, id, chunk_index) -> (content_hash, start, end, text).
+    Single source of truth for embed_org and for reconcile()."""
+    want: dict[tuple[str, int, int], tuple[str, int, int, str]] = {}
     for r in conn.execute("SELECT id, title, body FROM source_records WHERE organization_id=%s AND source_type = ANY(%s)",
                           (org_id, list(EMBED_SOURCE_TYPES))):
         body = r["body"] or ""
@@ -34,6 +34,27 @@ def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider) -> dict
                           "AND status IN ('active','candidate')", (org_id,)):
         text = f"{r['predicate']}: {r['summary']}"
         want[("facts", r["id"], 0)] = (hashlib.sha256(text.encode()).hexdigest(), 0, len(text), text)
+    return want
+
+
+def reconcile(conn: psycopg.Connection, org_id: int, model: str) -> dict:
+    """Compare wanted chunks with stored vectors of `model`. Nothing is silently missing: every difference is listed
+    with its reason."""
+    want = wanted_chunks(conn, org_id)
+    have = {(r["owner_table"], r["owner_id"], r["chunk_index"]): r["content_hash"] for r in conn.execute(
+        "SELECT owner_table, owner_id, chunk_index, content_hash FROM embeddings WHERE organization_id=%s AND model=%s",
+        (org_id, model))}
+    return {"wanted": len(want), "stored": len(have),
+            "missing": sorted(k for k in want if k not in have),
+            "stale_content": sorted(k for k in want if k in have and have[k] != want[k][0]),
+            "orphaned": sorted(k for k in have if k not in want),
+            "title_only_empty_body": sum(1 for k, v in want.items() if k[0] == "source_records" and v[2] == 0)}
+
+
+def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider) -> dict:
+    if not provider.semantic_embeddings:
+        return {"candidates": 0, "embedded": 0, "cached": 0, "skipped": "provider has no semantic embeddings"}
+    want = wanted_chunks(conn, org_id)
     have = {(r["owner_table"], r["owner_id"], r["chunk_index"]): r["content_hash"] for r in conn.execute(
         "SELECT owner_table, owner_id, chunk_index, content_hash FROM embeddings WHERE organization_id=%s AND model=%s",
         (org_id, provider.embed_model))}

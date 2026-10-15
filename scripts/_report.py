@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 from app.config import Settings  # noqa: E402
 from app.intelligence.judge import delta, meter  # noqa: E402
+from app.retrieval.embed import reconcile  # noqa: E402
 
 
 @dataclass
@@ -62,6 +63,13 @@ def header(prov, conn, org_id: int, *, demo_corpus: bool = False) -> list[str]:
     lines.append("- **Embedding model for this corpus:** "
                  + (", ".join(f"`{m}` ({n} vectors)" for m, n in stored) or "none stored")
                  + f" · configured: `{prov.embed_model}`")
+    if prov.semantic_embeddings:
+        rc = reconcile(conn, org_id, prov.embed_model)
+        lines.append(f"- **Embedding coverage (`{prov.embed_model}`):** {rc['stored']} stored of {rc['wanted']} wanted · "
+                     f"missing {len(rc['missing'])} · stale {len(rc['stale_content'])} · orphaned {len(rc['orphaned'])} "
+                     f"· {rc['title_only_empty_body']} empty-body records embedded title-only")
+        if rc["missing"] or rc["stale_content"]:
+            lines.append("- ⚠️ **Embedding coverage is incomplete:** vector results cover only part of this corpus.")
     mixed = len({m for m, _ in stored}) > 1
     if mixed:
         lines.append("- ⚠️ **Mixed embedding models in one corpus** — vectors are not comparable across models; "
