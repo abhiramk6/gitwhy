@@ -1,0 +1,15 @@
+{
+  "frozen_file": "eval/heldout_oss.json",
+  "frozen_sha256": "f69d0f14af3739cdb8f985a07a303d25def3e3c47cada9319d992cd205361b71",
+  "run_log": "eval/heldout_runs.jsonl",
+  "runs_allowed_per_case": 1,
+  "manual_review_cases": ["H6"],
+  "reporting": "counts only; unlisted items are counted, not adjudicated; no percentages",
+  "prompt_freeze": {
+    "covers": ["backend/app/intelligence/tasks.py", "backend/app/planning/planner.py", "backend/app/retrieval/search.py",
+               "backend/app/knowledge/build_graph.py", "model chain + embedding model from settings"],
+    "frozen_hash": null,
+    "frozen_at": null
+  },
+  "status": "not frozen: lists unconfirmed by owner; no held-out case has been run"
+}
