@@ -26,3 +26,10 @@ Updated: 2026-10-15
   (ops/notify.sh); NOTIFY_DM=1 forces DM. Instructions/approvals accepted ONLY from the owner's user id.
 - Approvals for billable/outward actions must still be typed in the terminal session (Telegram events are
   delivered as background events, not user input).
+
+## Persistence (tmux)
+- tmux session `lore`: window `agent` (agent --resume b5139bff-…, cwd /root), window `bridge`
+  (ops/telegram_bridge.sh — owner-only Telegram -> agent pane, prefixed "[Telegram from owner]"),
+  window `shell`.
+- Attach: `tmux attach -t lore`; detach: Ctrl-b d. First attach needs "Yes, I trust this folder" once.
+- Telegram poller Monitor is NOT used with the bridge (two getUpdates readers conflict).
