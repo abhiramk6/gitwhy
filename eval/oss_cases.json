@@ -1,0 +1,34 @@
+{
+  "org_slug": "oss-pallets",
+  "retrieval": [
+    {"q": "SECRET_KEY_FALLBACKS", "expect_any": ["flask:src/flask/sessions.py", "acme-handbook:docs/adr/ADR-106-session-key-rotation.md"], "k": 5,
+     "why": "config key defined in Flask source and decided in ADR-106"},
+    {"q": "what did we decide about rotating session signing keys", "expect_any": ["acme-handbook:docs/adr/ADR-106-session-key-rotation.md"], "k": 5,
+     "why": "team decision layered over upstream code"},
+    {"q": "retry with exponential backoff for flaky outbound calls", "expect_any": ["acme-handbook:docs/adr/ADR-103-outbound-http.md", "urllib3:src/urllib3/util/retry.py", "acme-handbook:runbooks/http-client-reliability.md"], "k": 5,
+     "why": "urllib3.Retry is the real mechanism; ADR-103 is the team rule"},
+    {"q": "who may wrap text in Markup", "expect_any": ["acme-handbook:docs/adr/ADR-102-html-escaping.md", "markupsafe:src/markupsafe/__init__.py"], "k": 5,
+     "why": "security rule + real class"},
+    {"q": "FLASK-6170", "expect_any": ["FLASK-6170"], "k": 3, "why": "exact ticket-key lookup (GitHub issue pallets/flask#6170)"}
+  ],
+  "plans": [
+    {"request": "Let Flask session cookies survive a secret key rotation without logging users out",
+     "expect_components": ["flask", "itsdangerous"], "expect_primary": "flask",
+     "expect_decisions": ["ADR-106"], "exclude_decisions": ["ADR-105"],
+     "why": "flask -> itsdangerous is a real structural import (sessions.py); ADR-105 is superseded"},
+    {"request": "Change markupsafe escape() so it also escapes backtick characters",
+     "expect_components": ["markupsafe", "jinja", "werkzeug", "flask"], "expect_primary": "markupsafe",
+     "expect_decisions": ["ADR-102"], "exclude_decisions": ["ADR-105"],
+     "why": "jinja, werkzeug and flask import markupsafe: the blast radius of a one-line change"},
+    {"request": "Add retry with exponential backoff to outbound HTTP calls made through requests",
+     "expect_components": ["requests", "urllib3"], "expect_primary": "requests",
+     "expect_decisions": ["ADR-103"], "exclude_decisions": ["ADR-105"],
+     "why": "requests -> urllib3 (models.py imports urllib3.filepost); ADR-103 governs timeouts/retries"},
+    {"request": "Add shell completion for a new Click command group",
+     "expect_components": ["click"], "expect_primary": "click",
+     "expect_decisions": ["ADR-104"], "exclude_decisions": ["ADR-105"],
+     "why": "click is the CLI framework; ADR-104 mandates it"},
+    {"request": "Add GraphQL subscriptions backed by a Kafka event stream", "expect_status": "insufficient_evidence",
+     "why": "nothing in the corpus supports this; the planner must refuse rather than invent a plan"}
+  ]
+}

@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { Async, Badge, Card, fmt, useAsync } from '../components.jsx'
 
-const EXAMPLE = 'Add support for partial refunds on captured payments (PAY-142)'
+const EXAMPLES = {
+  northwind: 'Add support for partial refunds on captured payments (PAY-142)',
+  'oss-pallets': 'Let Flask session cookies survive a secret key rotation without logging users out',
+}
+const DEFAULT_EXAMPLE = EXAMPLES.northwind
 
 function Evidence({ ids, registry, onPick }) {
   return (
@@ -92,7 +96,14 @@ function Plan({ plan, reload }) {
 }
 
 export default function Planner() {
-  const [text, setText] = useState(EXAMPLE)
+  const [example, setExample] = useState(DEFAULT_EXAMPLE)
+  const [text, setText] = useState(DEFAULT_EXAMPLE)
+  useEffect(() => {
+    api.overview().then((o) => {
+      const ex = EXAMPLES[o.organization.slug]
+      if (ex) { setExample(ex); setText((t) => (t === DEFAULT_EXAMPLE ? ex : t)) }
+    }).catch(() => {})
+  }, [])
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
   const [plan, setPlan] = useState(null)
@@ -110,7 +121,7 @@ export default function Planner() {
         <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} aria-label="Feature request" />
         <div className="row">
           <button onClick={run} disabled={busy || text.trim().length < 8}>{busy ? 'Planning…' : 'Generate plan'}</button>
-          <button className="ghost" onClick={() => setText(EXAMPLE)}>Use example</button>
+          <button className="ghost" onClick={() => setText(example)}>Use example</button>
         </div>
         {err && <div className="state error" role="alert">
           {err.status === 401 ? 'Writes need the demo token (set it in the sidebar).' : err.message}</div>}

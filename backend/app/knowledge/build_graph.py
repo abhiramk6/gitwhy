@@ -10,6 +10,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+import sys
 from collections import Counter
 from dataclasses import dataclass, field
 
@@ -94,17 +95,42 @@ def _meta(text: str) -> dict[str, str]:
     return out
 
 
+STDLIB = set(sys.stdlib_module_names) | {"__future__"}
+
+
+def _parse(body: str):
+    try:
+        return ast.parse(body)
+    except (SyntaxError, ValueError, RecursionError):
+        return None  # real-world sources: skip files that are not valid Python 3
+
+
+def node_is_relative(node) -> bool:
+    return isinstance(node, ast.ImportFrom) and bool(node.level)
+
+
+def _layout(path: str) -> tuple[str, str] | None:
+    """(top-level package, source prefix) for a file path; handles `pkg/...` and `src/pkg/...` layouts."""
+    parts = path.split("/")
+    if parts[0] == "src" and len(parts) > 2:
+        return parts[1], "src/"
+    if len(parts) > 1 and parts[0] not in ("tests", "docs", "src"):
+        return parts[0], ""
+    return None
+
+
 def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
     b = Builder(conn, org_id)
     files = _records(conn, org_id, "file")
     repo_of = {r["source_id"]: r["source_id"].split(":", 1)[0] for r in files}
 
-    # packages: top-level directory per repo => owning repo
-    pkg_repo: dict[str, str] = {}
+    # packages: top-level import name => (owning repo, source prefix)
+    pkg_repo: dict[str, tuple[str, str]] = {}
     for sid in repo_of:
         repo, path = sid.split(":", 1)
-        if "/" in path and not path.startswith(("tests/", "docs/")):
-            pkg_repo.setdefault(path.split("/", 1)[0], repo)
+        lay = _layout(path)
+        if lay:
+            pkg_repo.setdefault(lay[0], (repo, lay[1]))
 
     svc = {r: b.entity("service", r, r) for r in b.repo_id}
     mod: dict[str, int] = {}
@@ -122,29 +148,39 @@ def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
         if sid not in mod:
             continue
         repo, path = sid.split(":", 1)
-        tree = ast.parse(rec["body"])
+        tree = _parse(rec["body"])
+        if tree is None:
+            continue
+        lay = _layout(path)
+        prefix = lay[1] if lay else ""
+        pkgparts = (path[len(prefix):] if path.startswith(prefix) else path).split("/")[:-1]
         for node in ast.walk(tree):
             targets: list[str] = []
             if isinstance(node, ast.Import):
                 targets = [a.name for a in node.names]
             elif isinstance(node, ast.ImportFrom):
-                if node.level:  # relative import inside the same package
-                    pkg = path.rsplit("/", 1)[0]
-                    targets = [f"{pkg}/{node.module}".replace("/", ".")] if node.module else []
+                if node.level:  # relative import: resolve against this file's package
+                    base = pkgparts[:max(len(pkgparts) - (node.level - 1), 0)]
+                    mod_t = ".".join(base + ([node.module] if node.module else []))
+                    targets = [mod_t] if node.module else []
+                    targets += [f"{mod_t}.{a.name}".lstrip(".") for a in node.names]
                 elif node.module:
-                    targets = [node.module]
+                    targets = [node.module] + [f"{node.module}.{a.name}" for a in node.names]
             for t in targets:
                 top = t.split(".")[0]
-                cand = t.replace(".", "/") + ".py"
-                target_repo = pkg_repo.get(top)
+                target_repo, tprefix = pkg_repo.get(top, (None, ""))
+                cand = tprefix + t.replace(".", "/") + ".py"
                 if target_repo and f"{target_repo}:{cand}" in mod:
-                    b.edge(mod[sid], mod[f"{target_repo}:{cand}"], "imports", "structural",
-                           f"{sid}:{getattr(node, 'lineno', 0)}", source_record_id=rec["id"])
+                    if f"{target_repo}:{cand}" != sid:
+                        b.edge(mod[sid], mod[f"{target_repo}:{cand}"], "imports", "structural",
+                               f"{sid}:{getattr(node, 'lineno', 0)}", source_record_id=rec["id"])
                     if target_repo != repo:
                         b.edge(svc[repo], svc[target_repo], "depends_on", "structural",
                                f"{sid} imports {t}", source_record_id=rec["id"])
-                elif top not in pkg_repo and top not in {"__future__", "typing", "dataclasses", "json",
-                                                          "urllib", "hashlib", "re", "ast"}:
+                elif target_repo and target_repo != repo and "." not in t.lstrip("."):
+                    b.edge(svc[repo], svc[target_repo], "depends_on", "structural",
+                           f"{sid} imports {t}", source_record_id=rec["id"])
+                elif not target_repo and top not in STDLIB and top and not node_is_relative(node):
                     pkg = b.entity("package", top)
                     b.edge(mod[sid], pkg, "imports_external", "structural", f"{sid}:{getattr(node, 'lineno', 0)}",
                            source_record_id=rec["id"])
@@ -304,7 +340,7 @@ def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
     # ---- reuse candidate (inferred): classes with near-identical public interface across repos
     classes: dict[str, tuple[str, set[str]]] = {}
     for rec in files:
-        for n in ast.walk(ast.parse(rec["body"])):
+        for n in ast.walk(_parse(rec["body"]) or ast.parse("")):
             if isinstance(n, ast.ClassDef):
                 ms = {m.name for m in n.body if isinstance(m, ast.FunctionDef) and m.name != "__init__"}
                 if len(ms) >= 3:

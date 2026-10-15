@@ -61,3 +61,10 @@ Updated: 2026-10-15
   window `shell`.
 - Attach: `tmux attach -t lore`; detach: Ctrl-b d. First attach needs "Yes, I trust this folder" once.
 - Telegram poller Monitor is NOT used with the bridge (two getUpdates readers conflict).
+
+## Open-source demo (2026-10-15)
+- scripts/build_oss_fixture.py converts cloned public repos (pallets/* + psf/requests + urllib3) into ingest layout
+  (/root/oss-fixture, outside git); fixtures/oss-overlay = synthetic team ADR-101..108 + runbooks on top.
+- Org slug `oss-pallets`; serve with ORG_SLUG=oss-pallets on port 8001 (northwind stays on 8000).
+- eval/oss_cases.json + scripts/oss_cases.py -> docs/oss-demo-report.md (0 failed expectations, offline provider).
+- Graph builder now handles src/ layouts, relative imports, stdlib filtering; planner caps ownership risks.

@@ -3,7 +3,7 @@ import Overview from './pages/Overview.jsx'
 import GraphPage from './pages/Graph.jsx'
 import Planner from './pages/Planner.jsx'
 import Knowledge from './pages/Knowledge.jsx'
-import { getToken, setToken } from './api.js'
+import { api, getToken, setToken } from './api.js'
 
 const PAGES = [
   ['overview', 'Overview', Overview],
@@ -26,6 +26,8 @@ function useHash() {
 export default function App() {
   const page = useHash()
   const [token, setTok] = useState(getToken())
+  const [org, setOrg] = useState(null)
+  useEffect(() => { api.overview().then((o) => setOrg(o.organization)).catch(() => {}) }, [])
   const Current = (PAGES.find(([k]) => k === page) || PAGES[0])[2]
   return (
     <div className="shell">
@@ -40,7 +42,9 @@ export default function App() {
           <input type="password" value={token} placeholder="only if required"
                  onChange={(e) => { setTok(e.target.value); setToken(e.target.value) }} />
         </label>
-        <p className="note">Synthetic organization. No real people or customer data.</p>
+        <p className="note">{org && !org.is_synthetic
+          ? 'Public open-source repositories (real GitHub history) with a synthetic team-knowledge layer on top.'
+          : 'Synthetic organization. No real people or customer data.'}</p>
       </nav>
       <main><Current /></main>
     </div>

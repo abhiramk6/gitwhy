@@ -50,10 +50,10 @@ def _identifiers(conn, org, original: str) -> list[tuple[str, int]]:
 def _keyword(conn, org, q: str, limit: int) -> list[tuple[str, int]]:
     ranked: list[tuple[str, int]] = []
     rows = conn.execute(
-        "SELECT 'record' AS k, id, ts_rank_cd(search_tsv, query) AS r FROM source_records, "
+        "SELECT 'record' AS k, id, ts_rank_cd(search_tsv, query, 1) AS r FROM source_records, "
         "websearch_to_tsquery('english', %(q)s) query WHERE organization_id=%(o)s AND source_type = ANY(%(t)s) "
         "AND search_tsv @@ query UNION ALL "
-        "SELECT 'fact', id, ts_rank_cd(search_tsv, query) FROM facts, websearch_to_tsquery('english', %(q)s) query "
+        "SELECT 'fact', id, ts_rank_cd(search_tsv, query, 1) FROM facts, websearch_to_tsquery('english', %(q)s) query "
         "WHERE organization_id=%(o)s AND status IN ('active','candidate') AND search_tsv @@ query "
         "ORDER BY r DESC LIMIT %(n)s", {"q": q, "o": org, "t": list(_SOURCE_TYPES), "n": limit}).fetchall()
     ranked += [(r["k"], r["id"]) for r in rows]

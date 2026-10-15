@@ -2,16 +2,23 @@ import { useMemo, useState } from 'react'
 import { api } from '../api.js'
 import { Async, Badge, Card, Chip, useAsync } from '../components.jsx'
 
-const TYPE_ROW = { person: 0, service: 1, package: 1, endpoint: 2, decision: 3 }
+const TYPE_ORDER = ['person', 'service', 'package', 'endpoint', 'decision']
 const REL_STYLE = { depends_on: '#4f7cff', applies_to: '#8a6bd6', owns: '#2a9d8f', supersedes: '#d9622b', calls_http: '#4f7cff', defined_in: '#9aa3b2' }
-const W = 920, ROW_H = 150
+const W = 920, ROW_H = 110, PER_LINE = 7
 
+// One band per entity type; large groups (e.g. 30+ packages in a real repository set) wrap onto extra lines.
 function layout(nodes) {
-  const rows = {}
-  nodes.forEach((n) => { (rows[TYPE_ROW[n.type] ?? 2] ||= []).push(n) })
   const pos = {}
-  Object.entries(rows).forEach(([r, list]) => {
-    list.forEach((n, i) => { pos[n.id] = { x: ((i + 0.5) * W) / list.length, y: 50 + Number(r) * ROW_H } })
+  let y = 50
+  const types = [...new Set([...TYPE_ORDER, ...nodes.map((n) => n.type)])]
+  types.forEach((t) => {
+    const list = nodes.filter((n) => n.type === t)
+    for (let start = 0; start < list.length; start += PER_LINE) {
+      const line = list.slice(start, start + PER_LINE)
+      line.forEach((n, i) => { pos[n.id] = { x: ((i + 0.5) * W) / PER_LINE + ((PER_LINE - line.length) * W) / (2 * PER_LINE), y } })
+      y += ROW_H - 20
+    }
+    if (list.length) y += 30
   })
   return pos
 }
@@ -85,7 +92,10 @@ export default function GraphPage() {
                     <div key={dir}>
                       <div className="muted">{dir === 'outbound' ? 'Points to' : 'Referenced by'}</div>
                       {d[dir].length === 0 && <div className="muted">none</div>}
-                      {d[dir].map((e) => (
+                      {d[dir].filter((e) => e.rel === 'part_of').length > 0 && (
+                        <div className="muted">{d[dir].filter((e) => e.rel === 'part_of').length} modules (part_of) — see Knowledge for sources</div>
+                      )}
+                      {d[dir].filter((e) => e.rel !== 'part_of').map((e) => (
                         <div key={e.id} className="alert">
                           <Badge kind={['structural', 'explicit'].includes(e.evidence_type) && e.status === 'active' ? 'verified' : 'inferred'} />
                           <div><button className="link" onClick={() => setSel(e.other_id)}>{e.other}</button>

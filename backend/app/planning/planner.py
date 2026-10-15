@@ -79,6 +79,7 @@ def _primary_services(conn, org, request: str, hits) -> tuple[dict[str, float], 
 # A plan needs at least this much grounded evidence (named service, API path, ticket project, or several
 # retrieved records from one repository). Weak lexical/vector matches alone must not produce a plan.
 MIN_ANCHOR = 3
+OWNERSHIP_CAP = 4
 
 
 def create_plan(conn: psycopg.Connection, org_id: int, provider: Provider, request: str,
@@ -136,6 +137,7 @@ def create_plan(conn: psycopg.Connection, org_id: int, provider: Provider, reque
         return ev.add(f"fact:{f['id']}", f["fact_type"], f["summary"][:100], f["source_url"], f["evidence_type"], f["status"])
 
     decisions, risks, reuse, questions, stale = [], [], [], [], []
+    owner_facts: list = []
     for f in facts:
         lbl = _label(f["evidence_type"], f["status"])
         if f["fact_type"] == "decision":
@@ -152,12 +154,27 @@ def create_plan(conn: psycopg.Connection, org_id: int, provider: Provider, reque
                 relevant = relevant or any(h.snippet and f["object_value"] in h.snippet for h in hits)
             if f["fact_type"] == "conflict":  # relevant when any conflicting ADR applies to an affected service
                 relevant = any(applies.get(adr_ent.get(a), set()) & affected_ids for a in f["object_value"].split("+"))
-            if relevant:
+            if relevant and f["fact_type"] == "ownership":
+                owner_facts.append(f)  # capped below: large codebases have many bus-factor facts
+            elif relevant:
                 item = {"type": f["fact_type"], "summary": f["summary"], "label": lbl, "evidence": [fact_ev(f)]}
                 (questions if f["fact_type"] == "conflict" else risks).append(item)
         elif f["fact_type"] == "reuse" and f["status"] == "candidate":
             if any(s in f["object_value"] for s in all_services):
                 reuse.append({"summary": f["summary"], "label": "inferred", "evidence": [fact_ev(f)]})
+
+    # ownership risks: keep the most relevant few (file named in retrieval hits > primary service > confidence)
+    hit_files = {h.source_id for h in hits}
+
+    def _rank(f):
+        return (f["object_value"] not in hit_files and not any(s in f["object_value"] for s in hit_files),
+                f["repo"] not in primary, -float(f["confidence"]), f["id"])
+    for f in sorted(owner_facts, key=_rank)[:OWNERSHIP_CAP]:
+        risks.append({"type": "ownership", "summary": f["summary"], "label": _label(f["evidence_type"], f["status"]),
+                      "evidence": [fact_ev(f)]})
+    if len(owner_facts) > OWNERSHIP_CAP:
+        questions.append({"type": "question", "summary": f"{len(owner_facts) - OWNERSHIP_CAP} further ownership/bus-factor facts apply to "
+                                     "the affected services; see the Knowledge page.", "label": "proposed", "evidence": []})
 
     # stale references: affected code that cites a superseded decision
     superseded = {f["object_value"]: f for f in facts if f["fact_type"] == "decision" and f["status"] == "superseded"}
@@ -196,8 +213,9 @@ def create_plan(conn: psycopg.Connection, org_id: int, provider: Provider, reque
     last_of: dict[str, str] = {}
     for s in dict.fromkeys(order):
         comp = next(c for c in components if c["service"] == s)
-        role_txt = {"primary": "Implement the feature core", "downstream-dependency": "Add supporting capability",
-                    "upstream-consumer": "Expose the feature to users"}.get(comp["role"], "Adjust")
+        role_txt = {"primary": "Implement the feature core",
+                    "downstream-dependency": "Assess whether supporting changes are needed",
+                    "upstream-consumer": "Verify and adapt the consumer"}.get(comp["role"], "Adjust")
         dep_ids = list(pre) + [last_of[x] for x in last_of if x != s and comp["role"] != "downstream-dependency"]
         last_of[s] = task(f"{role_txt} in {s} for: {request}", s, dep_ids, comp["evidence"], comp["reason"])
     for r_ in reuse:
