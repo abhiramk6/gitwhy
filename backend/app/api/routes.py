@@ -24,7 +24,7 @@ class RememberBody(BaseModel):
 
 
 class OverrideBody(BaseModel):
-    rule: str = Field(pattern=r"^ADR-\d+$")
+    rule: str = Field(min_length=1, max_length=200)
     reason: str = Field(min_length=5, max_length=1000)
     author: str = Field(min_length=1, max_length=80)
     temporary: bool = True

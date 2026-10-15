@@ -6,7 +6,7 @@ from fastapi import Depends, Header, HTTPException
 
 from ..config import Settings, get_settings
 from ..db import connect
-from ..models.provider import OfflineProvider, Provider, VertexProvider
+from ..models.provider import Provider, make_provider
 
 
 def settings_dep() -> Settings:
@@ -19,9 +19,7 @@ def get_conn() -> Iterator[psycopg.Connection]:
 
 
 def get_provider(settings: Settings = Depends(settings_dep)) -> Provider:
-    if settings.provider == "vertex":
-        return VertexProvider(settings.gcp_project, settings.gcp_location, settings.gen_model, settings.embed_model)
-    return OfflineProvider()
+    return make_provider(settings)
 
 
 def get_org_id(conn: psycopg.Connection = Depends(get_conn), settings: Settings = Depends(settings_dep)) -> int:

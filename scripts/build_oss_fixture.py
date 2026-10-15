@@ -42,14 +42,27 @@ def git(repo: Path, *args: str) -> str:
                           encoding="utf-8", errors="replace").stdout
 
 
+DROPPED: dict[str, int] = {}
+
+
 def keep(rel: str, size: int) -> str | None:
-    """'file' (python source), 'doc' or None."""
+    """'file' (python source), 'doc' or None. Every drop is counted by reason and reported in the manifest."""
     low = rel.lower()
     if any(low.startswith(d) or f"/{d}" in f"/{low}" for d in SKIP_DIRS):
+        DROPPED["excluded_directory"] = DROPPED.get("excluded_directory", 0) + 1
         return None
     if rel.endswith(".py"):
-        return "file" if size <= MAX_PY and not rel.startswith(("setup.py", "docs/", "noxfile")) else None
-    if rel.endswith((".rst", ".md")) and size <= MAX_DOC and (rel.startswith("docs/") or "/" not in rel):
+        if rel.startswith(("setup.py", "docs/", "noxfile")):
+            DROPPED["build_or_docs_script"] = DROPPED.get("build_or_docs_script", 0) + 1
+            return None
+        if size > MAX_PY:
+            DROPPED["python_file_too_large"] = DROPPED.get("python_file_too_large", 0) + 1
+            return None
+        return "file"
+    if rel.endswith((".rst", ".md")) and (rel.startswith("docs/") or "/" not in rel):
+        if size > MAX_DOC:
+            DROPPED["doc_too_large"] = DROPPED.get("doc_too_large", 0) + 1
+            return None
         return None if rel.upper().startswith(("CHANGES", "CODE_OF", "LICENSE")) else "doc"
     return None
 
@@ -171,7 +184,7 @@ def main() -> int:
                 continue
             issue_nums.add(i["number"])
             tickets_all.append({
-                "key": f"{prefix}-{i['number']}", "summary": i["title"], "description": (i.get("body") or "")[:3000],
+                "key": f"{prefix}-{i['number']}", "summary": i["title"], "description": (i.get("body") or ""),
                 "status": "Done" if i["state"] == "closed" else "Open", "type": "Issue",
                 "labels": [l["name"] for l in i.get("labels", [])], "links": [],
                 "assignee": (i.get("assignee") or {}).get("login"), "updated": i["updated_at"][:10],
@@ -181,7 +194,7 @@ def main() -> int:
                 continue
             body = p.get("body") or ""
             linked = sorted({f"{prefix}-{n}" for n in map(int, FIX.findall(body)) if n in issue_nums})
-            prs_all.append({"repo": name, "number": p["number"], "title": p["title"], "body": body[:4000],
+            prs_all.append({"repo": name, "number": p["number"], "title": p["title"], "body": body,
                             "author": p["user"]["login"], "merged_at": p["merged_at"][:10],
                             "files": pr_files.get(p["number"], []), "linked_tickets": linked, "adds_imports": []})
         print(f"{name}: {len(copied)} files, {len(commits)} commits, "
@@ -201,6 +214,9 @@ def main() -> int:
         "reference_date": max(c["date"] for n in REPOS for c in json.loads(
             (out / "history" / f"{n}.commits.json").read_text())),
         "counts": {**counts, "pull_requests": len(prs_all), "issues": len(tickets_all)},
+        "dropped": DROPPED,
+        "limits": {"commits_per_repo": MAX_COMMITS, "issues_per_repo": 100, "pull_requests_per_repo": 100,
+                   "changelog_versions": 15, "note": "unauthenticated GitHub API; raise with a token + pagination"},
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1))
     if a.overlay:

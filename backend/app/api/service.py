@@ -10,7 +10,8 @@ import psycopg
 from ..graph.impact import impact
 from ..models.provider import Provider
 from ..planning.planner import create_plan, unsupported_claims
-from ..retrieval.search import search
+from ..config import get_settings
+from ..retrieval.search import search_with_meta
 
 ALERT_TYPES = ("ownership", "risk", "override", "conflict", "reuse")
 
@@ -39,6 +40,12 @@ def overview(conn: psycopg.Connection, org: int) -> dict:
                 "SELECT fact_type, status, count(*) n FROM facts WHERE organization_id=%s GROUP BY 1,2", org)},
         },
         "alerts": alerts,
+        "intelligence": {
+            "provider": get_settings().provider,
+            "llm_configured": get_settings().provider != "offline",
+            "cached_judgments": q("SELECT count(*) n FROM llm_judgments WHERE organization_id=%s", org)[0]["n"],
+            "embedded_chunks": q("SELECT count(*) n FROM embeddings WHERE organization_id=%s", org)[0]["n"],
+        },
         "ingestion": ingestion_runs(conn, org, 5),
     }
 
@@ -104,7 +111,7 @@ def set_fact_status(conn, org: int, fact_id: int, status: str) -> dict | None:
 
 
 def remember(conn, org: int, text: str, author: str, scope: str = "org", repo: str | None = None) -> dict:
-    sid = hashlib.sha1(f"{author}|{scope}|{repo}|{text}".encode()).hexdigest()[:12]
+    sid = hashlib.sha1(f"{author}|{scope}|{repo}|{text}".encode()).hexdigest()
     repo_id = None
     if repo:
         r = conn.execute("SELECT id FROM repositories WHERE organization_id=%s AND name=%s", (org, repo)).fetchone()
@@ -113,7 +120,7 @@ def remember(conn, org: int, text: str, author: str, scope: str = "org", repo: s
         "INSERT INTO facts (organization_id, repository_id, fact_type, predicate, object_value, summary, scope, "
         "evidence_type, status, confidence, source_type, source_id, author) VALUES (%s,%s,'memory','remembered',%s,%s,%s,"
         "'explicit','candidate',0.5,'remember',%s,%s) ON CONFLICT (organization_id, fact_type, predicate, object_value, "
-        "source_type, source_id) DO NOTHING RETURNING id", (org, repo_id, text[:200], text, scope, sid, author)).fetchone()
+        "source_type, source_id) DO NOTHING RETURNING id", (org, repo_id, sid, text, scope, sid, author)).fetchone()
     return {"id": row["id"] if row else None, "created": bool(row), "status": "candidate"}
 
 
@@ -136,13 +143,17 @@ def override(conn, org: int, rule: str, reason: str, author: str, temporary: boo
     return {"id": row["id"] if row else None, "created": bool(row), "status": "active" if approver else "candidate"}
 
 
-def do_search(conn, org: int, provider: Provider, q: str, k: int = 10) -> list[dict]:
-    return [asdict(h) | {"key": list(h.key)} for h in search(conn, org, provider, q, k=k)]
+def do_search(conn, org: int, provider: Provider, q: str, k: int = 10) -> dict:
+    hits, meta = search_with_meta(conn, org, provider, q, k=k)
+    return {"mode": meta["mode"], "semantic": meta["semantic"], "analysis": meta["analysis"],
+            "hits": [asdict(h) | {"key": list(h.key)} for h in hits]}
 
 
 def make_plan(conn, org: int, provider: Provider, request: str, depth: int = 3) -> dict:
     plan = create_plan(conn, org, provider, request, depth=depth, persist=False)
-    plan["unsupported_claims"] = unsupported_claims(plan) if plan.get("status") != "insufficient_evidence" else []
+    plan["unsupported_claims"] = unsupported_claims(plan) if plan.get("status") == "draft" else []
+    if plan.get("status") == "llm_required":  # nothing to persist: no plan was produced
+        return {"id": None, "plan_status": "unavailable", "created_at": None, **plan}
     row = conn.execute("INSERT INTO feature_plans (organization_id, request_text, plan, model) VALUES (%s,%s,%s::jsonb,%s) "
                        "RETURNING id, status, created_at", (org, request, json.dumps(plan), provider.name)).fetchone()
     return {"id": row["id"], "plan_status": row["status"], "created_at": row["created_at"], **plan}

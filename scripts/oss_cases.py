@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from app.config import get_settings  # noqa: E402
 from app.db import connect  # noqa: E402
-from app.models.provider import OfflineProvider, VertexProvider  # noqa: E402
+from app.models.provider import make_provider  # noqa: E402
 from app.planning.planner import create_plan, unsupported_claims  # noqa: E402
 from app.retrieval.search import search  # noqa: E402
 
@@ -27,8 +27,7 @@ def main() -> int:
     a = ap.parse_args()
     cases = json.loads((ROOT / "eval" / "oss_cases.json").read_text())
     s = get_settings()
-    prov = VertexProvider(s.gcp_project, s.gcp_location, s.gen_model, s.embed_model) if s.provider == "vertex" \
-        else OfflineProvider()
+    prov = make_provider(s)
     out = [f"# Open-source demo report ({cases['org_slug']})", "",
            f"Provider: `{prov.name}`. Real public GitHub history for 8 repositories plus a synthetic team-knowledge "
            "overlay (ADR-101..108, runbooks).", "", "## Retrieval", "",
@@ -48,6 +47,9 @@ def main() -> int:
         out += ["", "## Feature plans", ""]
         for c in cases["plans"]:
             plan = create_plan(conn, org, prov, c["request"], persist=False)
+            if plan.get("status") == "llm_required":
+                out += [f"### SKIPPED — {c['request']}", "", "Planning needs an LLM provider; none configured.", ""]
+                continue
             problems = []
             if "expect_status" in c:
                 if plan.get("status") != c["expect_status"]:

@@ -16,16 +16,13 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from app.config import get_settings  # noqa: E402
 from app.db import connect  # noqa: E402
-from app.models.provider import OfflineProvider, VertexProvider  # noqa: E402
+from app.models.provider import make_provider  # noqa: E402
 from app.planning.planner import create_plan, unsupported_claims  # noqa: E402
 from app.retrieval.search import search  # noqa: E402
 
 
 def provider():
-    s = get_settings()
-    if s.provider == "vertex":
-        return VertexProvider(s.gcp_project, s.gcp_location, s.gen_model, s.embed_model)
-    return OfflineProvider()
+    return make_provider(get_settings())
 
 
 def main() -> int:
@@ -67,6 +64,10 @@ def main() -> int:
         total_claims = unsupported = 0
         for c in cases["plans"]:
             plan = create_plan(conn, org, prov, c["request"], persist=False)
+            if plan.get("status") == "llm_required":
+                lines.append(f"| {c['request'][:60]} | plan | SKIPPED: planning needs an LLM provider "
+                             "(PROVIDER=gemini + GEMINI_API_KEY, or vertex) |")
+                continue
             checks: list[tuple[str, bool]] = []
             if c.get("expect_insufficient"):
                 checks.append(("returns insufficient_evidence instead of inventing a plan",

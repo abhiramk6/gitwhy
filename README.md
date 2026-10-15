@@ -27,3 +27,9 @@ configured they are accepted only when `ENVIRONMENT=local`. Secrets live in `~/.
 LLM output is accepted only if every evidence id exists in the plan's evidence registry.
 
 See `docs/PLAN.md`, `docs/decisions.md`, `docs/demo-script.md`, `docs/eval-report.md`, `docs/operations.md`.
+
+## Model provider
+`PROVIDER=offline` (default) runs with no model: lexical search only; planning, conflict/compliance/reuse judgments
+return `llm_required` / are skipped. Set `PROVIDER=gemini` with `GEMINI_API_KEY` (Gemini Developer API), or
+`PROVIDER=vertex` with `GCP_PROJECT` (application default credentials). Judgments are cached in `llm_judgments`
+and replayed without a model. See `docs/heuristics-audit.md`.

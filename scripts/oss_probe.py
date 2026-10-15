@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 from app.config import get_settings  # noqa: E402
 from app.db import connect  # noqa: E402
-from app.models.provider import OfflineProvider, VertexProvider  # noqa: E402
+from app.models.provider import make_provider  # noqa: E402
 from app.planning.planner import create_plan  # noqa: E402
 from app.retrieval.search import search  # noqa: E402
 
@@ -17,8 +17,7 @@ from app.retrieval.search import search  # noqa: E402
 def main() -> int:
     cfg = json.loads((ROOT / "eval" / "oss_probe.json").read_text())
     s = get_settings()
-    prov = VertexProvider(s.gcp_project, s.gcp_location, s.gen_model, s.embed_model) if s.provider == "vertex" \
-        else OfflineProvider()
+    prov = make_provider(s)
     out = [f"# Open-source probe report", "", f"Provider: `{prov.name}`. Questions were written from general knowledge "
            "of Flask/Werkzeug/Jinja/Click/Requests/urllib3, not from the indexed text.", "",
            "## Questions (top 5)", "", "| Question | First correct source (rank) | Top 3 |", "|---|---|---|"]
@@ -40,8 +39,8 @@ def main() -> int:
         for r in cfg["plans"]:
             p = create_plan(conn, org, prov, r, persist=False)
             out += [f"### {r}", ""]
-            if p.get("status") == "insufficient_evidence":
-                out += ["Refused: `insufficient_evidence`.", ""]
+            if p.get("status") in ("insufficient_evidence", "llm_required"):
+                out += [f"Not planned: `{p['status']}`.", ""]
                 continue
             out.append("Components: " + ", ".join(f"{c['service']} ({c['role']}, {c['label']})" for c in p["affected_components"]))
             out.append("")

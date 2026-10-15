@@ -24,14 +24,22 @@ function Search() {
         <button disabled={busy}>{busy ? 'Searching…' : 'Search'}</button>
       </form>
       {err && <div className="state error" role="alert">{err.message}</div>}
-      {res && res.length === 0 && <div className="state">No relevant evidence found. Try a ticket key or service name.</div>}
-      {res && res.map((h) => (
+      {res && (
+        <p className="muted">
+          {res.mode === 'llm+rerank' ? 'Model-assisted search (query analysis + relevance rerank).'
+            : 'Lexical search only: no LLM configured, so results are not relevance-judged.'}
+          {res.semantic ? ' Semantic vectors on.' : ''}
+        </p>
+      )}
+      {res && res.hits.length === 0 && <div className="state">No relevant evidence found. Try a ticket key or service name.</div>}
+      {res && res.hits.map((h) => (
         <article key={h.key.join(':')} className="hit">
           <div className="hit-title">{h.title} <span className="muted">· {h.source_type} {h.source_id}{h.repo ? ` · ${h.repo}` : ''}</span></div>
           <p>{h.snippet}</p>
           <div className="chips">
             {Object.entries(h.signals).map(([s, r]) => <span key={s} className="signal">{s} #{r}</span>)}
             {h.status && <span className="signal">{h.status}</span>}
+            {h.relevance != null && <span className="signal" title={h.reason || ''}>relevance {h.relevance}/3</span>}
           </div>
         </article>
       ))}
@@ -59,6 +67,12 @@ export default function Overview() {
                 <div className="tile"><b>{Object.entries(o.counts.facts).filter(([k]) => k.endsWith(':active')).reduce((a, [, n]) => a + n, 0)}</b><span>active facts</span></div>
                 <div className="tile"><b>{Object.entries(o.counts.facts).filter(([k]) => k.endsWith(':candidate')).reduce((a, [, n]) => a + n, 0)}</b><span>candidates to review</span></div>
               </div>
+              {!o.intelligence.llm_configured && (
+                <div className="state" role="status">
+                  LLM layer not configured (provider: {o.intelligence.provider}). Planning, decision-conflict, compliance and reuse
+                  judgments are unavailable{o.intelligence.cached_judgments ? `; ${o.intelligence.cached_judgments} cached judgments are replayed` : ''}.
+                </div>
+              )}
               <Search />
               <div className="grid2">
                 <Card title="Repositories">

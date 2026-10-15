@@ -11,12 +11,17 @@ import ast
 import json
 import re
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+from datetime import date
 
 import psycopg
 
-HTTP_HOST = re.compile(r"https?://([a-z0-9-]+)\.internal")
+from ..config import get_settings
+from ..models.provider import LLMUnavailable
+from . import judgments
+
+URL_HOST = re.compile(r"https?://([A-Za-z0-9][A-Za-z0-9.-]*)")  # first DNS label naming a known service = HTTP call
 
 
 @dataclass
@@ -26,6 +31,7 @@ class BuildStats:
     facts: int = 0
     retired: int = 0
     by_fact_type: dict[str, int] = field(default_factory=dict)
+    judgments: dict[str, object] = field(default_factory=dict)
 
 
 class Builder:
@@ -119,7 +125,7 @@ def _layout(path: str) -> tuple[str, str] | None:
     return None
 
 
-def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
+def build(conn: psycopg.Connection, org_id: int, provider=None) -> BuildStats:
     b = Builder(conn, org_id)
     files = _records(conn, org_id, "file")
     repo_of = {r["source_id"]: r["source_id"].split(":", 1)[0] for r in files}
@@ -191,7 +197,7 @@ def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
                         ep = b.entity("endpoint", f"{dec.func.attr.upper()} {dec.args[0].value}", repo)
                         b.edge(ep, mod[sid], "defined_in", "structural", f"{sid}:{node.lineno}",
                                source_record_id=rec["id"])
-        for host in sorted(set(HTTP_HOST.findall(rec["body"]))):
+        for host in sorted({h.split(".")[0] for h in URL_HOST.findall(rec["body"])}):
             if host in svc and host != repo:
                 b.edge(mod[sid], svc[host], "calls_http", "structural", sid, source_record_id=rec["id"])
                 b.edge(svc[repo], svc[host], "depends_on", "structural", f"{sid} calls {host}",
@@ -206,18 +212,17 @@ def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
                        source_record_id=rec["id"])
     # CODEOWNERS isn't a .py/.md; ingestion tags it as `doc` already.
 
-    # ---- ADRs => decisions
-    decisions: dict[str, int] = {}
-    adr_meta: dict[str, dict] = {}
+    # ---- ADRs => decisions (header parsing). Repos may restate an ADR; the most complete copy is authoritative.
+    by_adr: dict[str, list] = {}
     for rec in _records(conn, org_id, "adr"):
         m = re.search(r"(ADR-\d+)", rec["source_id"])
-        if not m:
-            continue
-        adr = m.group(1)
+        if m:
+            by_adr.setdefault(m.group(1), []).append(rec)
+    decisions: dict[str, int] = {}
+    adr_meta: dict[str, dict] = {}
+    for adr, recs in sorted(by_adr.items()):
+        rec = max(recs, key=lambda r: (len(r["body"]), r["source_id"]))
         meta = _meta(rec["body"])
-        applied = "applied" in (rec["title"] or "").lower()
-        if applied:
-            continue  # restatement in a consuming repo; the authoritative copy is the origin ADR
         adr_meta[adr] = {**meta, "rec": rec}
         decisions[adr] = b.entity("decision", adr, rec["source_id"].split(":")[0], title=rec["title"],
                                   status=meta.get("status"), topic=meta.get("topic"))
@@ -230,32 +235,16 @@ def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
                 b.edge(decisions[adr], svc[scope], "applies_to", "explicit", rec["source_url"] or adr,
                        source_record_id=rec["id"])
     for adr, meta in adr_meta.items():
-        for rel_key, rel in (("supersedes", "supersedes"),):
-            if meta.get(rel_key) in decisions:
-                b.edge(decisions[adr], decisions[meta[rel_key]], rel, "explicit", meta["rec"]["source_url"] or adr,
-                       source_record_id=meta["rec"]["id"])
+        if meta.get("supersedes") in decisions:
+            b.edge(decisions[adr], decisions[meta["supersedes"]], "supersedes", "explicit",
+                   meta["rec"]["source_url"] or adr, source_record_id=meta["rec"]["id"])
         if meta.get("status") == "superseded" and meta.get("superseded-by") in decisions:
             conn.execute("UPDATE facts SET superseded_by = (SELECT id FROM facts WHERE organization_id=%s AND "
                          "fact_type='decision' AND object_value=%s LIMIT 1) WHERE organization_id=%s AND "
                          "fact_type='decision' AND object_value=%s",
                          (org_id, meta["superseded-by"], org_id, adr))
 
-    # ---- conflicting conventions: two active decisions on the same topic with different scope
-    by_topic: dict[str, list[str]] = {}
-    for adr, meta in adr_meta.items():
-        if meta.get("status") == "accepted" and meta.get("topic"):
-            by_topic.setdefault(meta["topic"], []).append(adr)
-    for topic, adrs in by_topic.items():
-        scopes = {a: adr_meta[a].get("scope") for a in adrs}
-        if len(adrs) > 1 and len(set(scopes.values())) > 1:
-            first = sorted(adrs)[0]
-            b.fact("conflict", "conflicting_decisions", "+".join(sorted(adrs)),
-                   f"Active decisions {', '.join(sorted(adrs))} disagree on topic '{topic}' "
-                   f"(scopes: {scopes}). Scoped per repo until resolved.",
-                   "inferred", "candidate", "adr", ",".join(sorted(adrs)), adr_meta[first]["rec"]["source_url"],
-                   0.8, subject=decisions[first])
-
-    # ---- tickets
+    # ---- tickets: explicit link edges; an open ticket that blocks another is a structural fact
     tickets: dict[str, int] = {}
     for rec in _records(conn, org_id, "jira_issue"):
         t = rec["payload"]
@@ -270,13 +259,14 @@ def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
                 rel = {"blocked-by": "blocked_by", "blocks": "blocks", "relates-to": "relates_to"}[l["type"]]
                 b.edge(tickets[t["key"]], tickets[l["key"]], rel, "explicit", rec["source_url"] or t["key"],
                        source_record_id=rec["id"])
-        if "risk" in t.get("labels", []) and t["status"] != "Done":
-            blocked = [x["key"] for x in t["links"] if x["type"] == "blocks"]
-            b.fact("risk", "migration_blocks_feature", t["key"],
-                   f"{t['key']} ({t['summary']}) is {t['status']} and blocks {', '.join(blocked) or 'work'}.",
+        blocked = [x["key"] for x in t.get("links", []) if x["type"] == "blocks" and x["key"] in tickets]
+        if blocked and t["status"] != "Done":
+            b.fact("risk", "open_blocker", t["key"],
+                   f"{t['key']} ({t['summary']}) is {t['status']} and blocks {', '.join(blocked)}.",
                    "explicit", "active", "jira_issue", t["key"], rec["source_url"], 0.9, subject=tickets[t["key"]])
 
-    # ---- PRs: modifies / implements / overrides / unrecorded standard bypass
+    # ---- PRs: structural modifies / explicit implements edges
+    prs: list[dict] = []
     for rec in _records(conn, org_id, "github_pr"):
         p = rec["payload"]
         pr = b.entity("pull_request", rec["source_id"], p["repo"], title=p["title"])
@@ -289,20 +279,15 @@ def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
             if k in tickets:
                 b.edge(pr, tickets[k], "implements", "explicit", rec["source_url"] or rec["source_id"],
                        source_record_id=rec["id"])
-        override = re.search(r"^Override:\s*(ADR-\d+)\s+reason=(.+)$", p["body"], re.M)
-        raw_http = bool({"requests", "urllib3", "httpx", "aiohttp"} & set(p.get("adds_imports", [])))
-        if override:
-            b.fact("override", "overrides_decision", f"{override.group(1)}@{rec['source_id']}",
-                   f"{rec['source_id']} overrides {override.group(1)}: {override.group(2)[:140]}",
-                   "explicit", "active", "github_pr", rec["source_id"], rec["source_url"], 1.0,
-                   subject=pr, repo=p["repo"], scope="repo", valid_from=p["merged_at"])
-        elif raw_http and "ADR-004" in decisions:
-            b.fact("risk", "unrecorded_standard_bypass", f"ADR-004@{rec['source_id']}",
-                   f"{rec['source_id']} introduces raw `requests` (ADR-004 requires platform_libs.http_client) "
-                   "with no recorded override.", "inferred", "candidate", "github_pr", rec["source_id"],
-                   rec["source_url"], 0.85, subject=pr, repo=p["repo"], scope="repo")
+        prs.append({"id": rec["source_id"], "repo": p["repo"], "title": p["title"], "body": p["body"],
+                    "files": p["files"], "_entity": pr, "_rec": rec})
 
-    # ---- ownership signals from commit history (structural)
+    # ---- model judgments (conflicts, compliance, reuse): skipped, and reported as skipped, without an LLM
+    if provider is not None:
+        _judge(conn, org_id, provider, b, svc, decisions, adr_meta, prs, files, mod)
+
+    # ---- ownership statistics from commit history (computed numbers; thresholds are settings)
+    cfg = get_settings()
     ref = conn.execute("SELECT max(payload->>'date') AS d FROM source_records WHERE organization_id=%s "
                        "AND source_type='github_commit'", (org_id,)).fetchone()["d"]
     per_file: dict[tuple[str, str], Counter] = {}
@@ -316,44 +301,27 @@ def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
     for (repo, f), cnt in sorted(per_file.items()):
         tot = sum(cnt.values())
         author, n = cnt.most_common(1)[0]
-        if tot >= 10 and n / tot >= 0.9 and f"{repo}:{f}" in mod:
+        if tot >= cfg.ownership_min_commits and n / tot >= cfg.ownership_min_share and f"{repo}:{f}" in mod:
             b.fact("ownership", "single_dominant_contributor", f"{repo}:{f}",
                    f"{author} authored {n}/{tot} commits ({n / tot:.0%}) to {repo}/{f}; bus-factor risk.",
                    "structural", "active", "github_commit", f"{repo}:{f}", None, 0.95,
                    subject=mod[f"{repo}:{f}"], repo=repo, scope="repo")
+    pr_last = defaultdict(str)
+    for p_ in prs:
+        a = p_["_rec"]["payload"].get("author")
+        pr_last[a] = max(pr_last[a], p_["_rec"]["payload"].get("merged_at", ""))
     for rec in _records(conn, org_id, "doc"):
         repo, path = rec["source_id"].split(":", 1)
         if path.endswith("CODEOWNERS"):
             for owner in re.findall(r"@([\w.]+)", rec["body"]):
-                last = max([v for (r, a), v in last_by_person.items() if a == owner] +
-                           [json.loads(json.dumps(x["payload"]))["merged_at"]
-                            for x in _records(conn, org_id, "github_pr") if x["payload"]["author"] == owner] or [""])
+                last = max([v for (r, a), v in last_by_person.items() if a == owner] + [pr_last.get(owner, "")])
                 if ref and last:
-                    from datetime import date
                     idle = (date.fromisoformat(ref) - date.fromisoformat(last)).days
-                    if idle > 90:
+                    if idle > cfg.dormant_days:
                         b.fact("ownership", "dormant_owner", f"{owner}@{repo}",
                                f"{owner} owns {repo} (CODEOWNERS) but has no activity since {last} ({idle} days).",
                                "structural", "active", "doc", rec["source_id"], rec["source_url"], 0.9,
                                subject=b.entity("person", owner), repo=repo, scope="repo")
-
-    # ---- reuse candidate (inferred): classes with near-identical public interface across repos
-    classes: dict[str, tuple[str, set[str]]] = {}
-    for rec in files:
-        for n in ast.walk(_parse(rec["body"]) or ast.parse("")):
-            if isinstance(n, ast.ClassDef):
-                ms = {m.name for m in n.body if isinstance(m, ast.FunctionDef) and m.name != "__init__"}
-                if len(ms) >= 3:
-                    classes[f"{rec['source_id']}::{n.name}"] = (rec["source_id"], ms)
-    keys = sorted(classes)
-    for i, a in enumerate(keys):
-        for c in keys[i + 1:]:
-            (fa, ma), (fc, mc) = classes[a], classes[c]
-            if fa.split(":")[0] != fc.split(":")[0] and len(ma & mc) / len(ma | mc) >= 0.8:
-                b.fact("reuse", "duplicate_implementation", f"{a} ~ {c}",
-                       f"{c} appears to re-implement {a} (interface overlap "
-                       f"{len(ma & mc) / len(ma | mc):.0%}). Prefer the shared implementation.",
-                       "inferred", "candidate", "file", fa, None, 0.8, subject=mod.get(fa))
     # ---- retire derived facts that are no longer supported by current evidence (stale-fact control).
     # User-authored facts (/remember, /override => author set) are never auto-retired.
     ids = sorted(b.fact_ids)
@@ -361,3 +329,70 @@ def build(conn: psycopg.Connection, org_id: int) -> BuildStats:
         "UPDATE facts SET status='rejected', updated_at=now() WHERE organization_id=%s AND author IS NULL "
         "AND status IN ('active','candidate') AND NOT (id = ANY(%s))", (org_id, ids)).rowcount
     return b.stats
+
+
+def _judge(conn, org, provider, b: "Builder", svc, decisions, adr_meta, prs, files, mod) -> None:
+    cfg = get_settings()
+    st = b.stats.judgments
+
+    def guarded(name, fn):
+        try:
+            fn()
+        except LLMUnavailable as exc:
+            st[name] = f"skipped: {exc}"
+
+    def conflicts():
+        adrs = {a: {"status": m.get("status"), "title": m["rec"]["title"], "body": m["rec"]["body"],
+                    "scope": m.get("scope", "")} for a, m in adr_meta.items()}
+        n = 0
+        for f in judgments.decision_conflicts(conn, org, provider, adrs, cfg.judge_batch_size):
+            a, c = f["pair"]
+            url = adr_meta[a]["rec"]["source_url"]
+            if f["relation"] == "conflict":
+                b.fact("conflict", "conflicting_decisions", f"{a}+{c}", f"{a} and {c} conflict: {f['reason']}",
+                       "inferred", "candidate", "adr", f"{a},{c}", url, 0.8, subject=decisions[a])
+            else:
+                b.fact("decision_relation", "suggested_supersession", f"{f['a']}>{f['b']}",
+                       f"{f['a']} appears to supersede {f['b']}: {f['reason']}", "inferred", "candidate", "adr",
+                       f"{f['a']},{f['b']}", url, 0.7, subject=decisions.get(f["a"]))
+            n += 1
+        st["decision_findings"] = n
+
+    def compliance():
+        active = {a: {"title": m["rec"]["title"], "body": m["rec"]["body"], "scope": m.get("scope", "")}
+                  for a, m in adr_meta.items() if m.get("status") == "accepted"}
+        if not active or not prs:
+            return
+        by_id = {p["id"]: p for p in prs}
+        plain = [{k: v for k, v in p.items() if not k.startswith("_")} for p in prs]
+        n = 0
+        for f in judgments.pr_compliance(conn, org, provider, plain, active, cfg.judge_batch_size):
+            p = by_id[f["pr"]]
+            payload = p["_rec"]["payload"]
+            if f["override"]:
+                b.fact("override", "overrides_decision", f"{f['adr']}@{f['pr']}",
+                       f"{f['pr']} overrides {f['adr']}: {f['quote']}", "explicit", "active", "github_pr", f["pr"],
+                       p["_rec"]["source_url"], 1.0, subject=p["_entity"], repo=p["repo"], scope="repo",
+                       valid_from=payload.get("merged_at"))
+            else:
+                b.fact("risk", "unrecorded_standard_bypass", f"{f['adr']}@{f['pr']}",
+                       f"{f['pr']} appears to violate {f['adr']} with no recorded override: {f['reason']}",
+                       "inferred", "candidate", "github_pr", f["pr"], p["_rec"]["source_url"], 0.7,
+                       subject=p["_entity"], repo=p["repo"], scope="repo")
+            n += 1
+        st["pr_findings"] = n
+
+    def reuse():
+        n = 0
+        for p in judgments.reuse_pairs(conn, org, provider, files, max_chars=150_000):
+            fa = p["existing"].split("::")[0]
+            b.fact("reuse", "duplicate_implementation", f"{p['existing']} ~ {p['duplicate']}",
+                   f"{p['duplicate']} appears to re-implement {p['existing']}: {p['reason']}", "inferred",
+                   "candidate", "file", fa, None, 0.7, subject=mod.get(fa),
+                   repo=p["duplicate"].split(":", 1)[0])
+            n += 1
+        st["reuse_findings"] = n
+
+    guarded("decision_conflicts", conflicts)
+    guarded("pr_compliance", compliance)
+    guarded("reuse", reuse)

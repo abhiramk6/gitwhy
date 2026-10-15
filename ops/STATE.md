@@ -68,3 +68,10 @@ Updated: 2026-10-15
 - Org slug `oss-pallets`; serve with ORG_SLUG=oss-pallets on port 8001 (northwind stays on 8000).
 - eval/oss_cases.json + scripts/oss_cases.py -> docs/oss-demo-report.md (0 failed expectations, offline provider).
 - Graph builder now handles src/ layouts, relative imports, stdlib filtering; planner caps ownership risks.
+
+## LLM layer (2026-10-15)
+- Removed rule-based pseudo-intelligence (see docs/heuristics-audit.md, decisions D11). New: app/intelligence/{tasks,judge}.py,
+  app/knowledge/judgments.py, chunk-level embeddings, migration 002, provider has_llm/semantic_embeddings flags.
+- NO model has run yet (no credentials). 51 tests pass with a scripted model (tests/fake_model.py).
+- Needs owner: GEMINI_API_KEY in ~/.config/lore/gemini.env (or Vertex login). Then: PROVIDER=gemini, python -m app.seed
+  (both orgs), python scripts/evaluate.py, scripts/oss_cases.py, scripts/oss_probe.py; confirm model names.

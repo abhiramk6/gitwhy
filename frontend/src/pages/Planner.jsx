@@ -23,7 +23,15 @@ function Plan({ plan, reload }) {
   const [msg, setMsg] = useState(null)
   const reg = plan.evidence || {}
   if (plan.status === 'insufficient_evidence') {
-    return <Card title="Not enough evidence">{plan.open_questions.map((q, i) => <p key={i}>{q}</p>)}</Card>
+    return <Card title="Not enough evidence">{plan.open_questions.map((q, i) => <p key={i}>{q.summary || q}</p>)}</Card>
+  }
+  if (plan.status === 'llm_required') {
+    return (
+      <Card title="LLM layer required">
+        {plan.open_questions.map((q, i) => <p key={i}>{q.summary || q}</p>)}
+        <p className="muted">Configure PROVIDER=gemini (GEMINI_API_KEY) or PROVIDER=vertex. Rule-based guessing is intentionally not offered.</p>
+      </Card>
+    )
   }
   const act = async (status) => {
     try { await api.setPlanStatus(plan.id, status); setMsg(`Plan ${status}.`); reload() } catch (e) { setMsg(e.message) }
@@ -34,6 +42,11 @@ function Plan({ plan, reload }) {
         <Card title="Plan" right={<span className="muted">#{plan.id} · {plan.plan_status} · {plan.provider}</span>}>
           <p>{plan.request}</p>
           <ul>{plan.assumptions.map((a, i) => <li key={i} className="muted">{a}</li>)}</ul>
+          {plan.search_mode && <div className="muted">search: {plan.search_mode}</div>}
+          {(plan.dropped_claims || []).length > 0 && (
+            <details><summary className="muted">{plan.dropped_claims.length} model claim(s) discarded by the evidence guard</summary>
+              <ul>{plan.dropped_claims.map((d, i) => <li key={i} className="muted">{d}</li>)}</ul></details>
+          )}
           <div className="row">
             <button onClick={() => act('approved')} disabled={plan.plan_status === 'approved'}>Approve plan</button>
             <button className="ghost" onClick={() => act('rejected')}>Reject</button>
@@ -44,14 +57,14 @@ function Plan({ plan, reload }) {
         <Card title="Affected components">
           {plan.affected_components.map((c) => (
             <div key={c.service + c.role} className="alert"><Badge kind={c.label} />
-              <div><b>{c.service}</b> <span className="muted">· {c.role}</span><div className="muted">{c.reason}</div>
+              <div><b>{c.service}</b> <span className="muted">· {c.role}{c.needs_change ? ` · change needed: ${c.needs_change}` : ''}</span><div className="muted">{c.reason}</div>
                 <Evidence ids={c.evidence} registry={reg} onPick={setPicked} /></div></div>
           ))}
         </Card>
         <Card title="Governing decisions">
           {plan.decisions.length === 0 && <div className="state">No applicable decisions found.</div>}
           {plan.decisions.map((d) => (
-            <div key={d.adr} className="alert"><Badge kind={d.label} /><div><b>{d.adr}</b> — {d.summary}
+            <div key={d.adr} className="alert"><Badge kind={d.label} /><div><b>{d.adr}</b> — {d.summary}{d.guidance ? <div className="muted">{d.guidance}</div> : null}
               <Evidence ids={d.evidence} registry={reg} onPick={setPicked} /></div></div>
           ))}
         </Card>

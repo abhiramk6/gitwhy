@@ -52,3 +52,13 @@ Free-trial account must not be upgraded. Hourly cost watcher posts to Telegram. 
 ## D10 — Control channel: Telegram group "Cb"; owner-user-id-only instructions  (2026-10-15, accepted by owner)
 tmux session `lore` keeps the agent alive; `ops/telegram_bridge.sh` forwards owner messages. Bot token must be rotated
 (old token exposed in an interactive session).
+
+
+## D11 - Judgments by model, extraction by code (2026-10-15)
+**Decision.** Rule-based logic may parse (AST imports, headers, CODEOWNERS), traverse (recursive CTE) and compute
+statistics, but may not judge relevance, intent, conflicts, compliance or reuse. Those are model tasks behind one
+provider interface with structured outputs, an evidence guard (ids must exist, quotes must occur in the source),
+trust labels derived from evidence, and a replayable judgment cache.
+**Consequence.** Without a configured model the product says so (`llm_required`, lexical search) instead of
+substituting heuristics. The offline hash "embeddings" no longer count as semantic search.
+**Supersedes** the earlier "deterministic planner with optional wording polish" design.

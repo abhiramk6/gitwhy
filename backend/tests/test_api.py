@@ -3,13 +3,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.deps import get_conn, settings_dep
+from app.api.deps import get_conn, get_provider, settings_dep
 from app.config import Settings
 from app.ingestion.fixtures import ingest
 from app.knowledge.build_graph import build
 from app.main import app
-from app.models.provider import OfflineProvider
 from app.retrieval.embed import embed_org
+from tests.fake_model import ideal_provider
 
 FIX = Path(__file__).resolve().parents[2] / "fixtures" / "northwind"
 TOKEN = {"X-Demo-Token": "t0ken"}
@@ -18,10 +18,12 @@ REQ = "Add support for partial refunds on captured payments (PAY-142)"
 
 @pytest.fixture()
 def client(conn):
+    prov = ideal_provider(choose=lambda p: ["payments-api"])
     org_id, _ = ingest(conn, FIX)
-    build(conn, org_id)
-    embed_org(conn, org_id, OfflineProvider())
+    build(conn, org_id, prov)
+    embed_org(conn, org_id, prov)
     app.dependency_overrides[get_conn] = lambda: conn
+    app.dependency_overrides[get_provider] = lambda: prov
     app.dependency_overrides[settings_dep] = lambda: Settings(demo_token="t0ken", environment="test", org_slug="northwind")
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -33,6 +35,7 @@ def test_overview_has_repos_and_alerts(client):
     kinds = {a["fact_type"] for a in j["alerts"]}
     assert {"ownership", "risk", "override", "conflict", "reuse"} <= kinds
     assert j["organization"]["is_synthetic"] is True
+    assert "llm_configured" in j["intelligence"]
 
 
 def test_graph_contains_known_dependency_with_evidence(client):
@@ -81,7 +84,7 @@ def test_override_records_rule_reason_and_approver(client):
     assert r["created"] and r["status"] == "active"
     facts = client.get("/api/knowledge", params={"fact_type": "override"}).json()
     assert any("ADR-004" in f["summary"] and "ines.kowalski" in f["summary"] for f in facts)
-    bad = client.post("/api/memory/override", headers=TOKEN, json={"rule": "not-an-adr", "reason": "xxxxx", "author": "a"})
+    bad = client.post("/api/memory/override", headers=TOKEN, json={"rule": "", "reason": "xxxxx", "author": "a"})
     assert bad.status_code == 422
 
 
@@ -93,8 +96,9 @@ def test_knowledge_filters_and_curation(client):
 
 
 def test_search_returns_signals(client):
-    hits = client.get("/api/search", params={"q": "PAY-142 partial refunds"}).json()
-    assert hits and hits[0]["signals"]
+    j = client.get("/api/search", params={"q": "PAY-142 partial refunds"}).json()
+    assert j["mode"] == "llm+rerank" and j["hits"] and j["hits"][0]["signals"]
+    assert j["hits"][0]["source_id"] == "PAY-142" and j["hits"][0]["relevance"] is not None
 
 
 def _rpc(client, method, params=None, id_=1):

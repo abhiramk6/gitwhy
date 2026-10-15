@@ -1,5 +1,26 @@
 # Heuristics audit (2026-10-15)
 
+## Status after the LLM-layer change
+
+| Item | Result |
+|---|---|
+| A1-A9 planner judgments (service choice, API-path regex, hard-coded library, decision/risk relevance, ownership cap, task and test templates, stale references) | Removed. `planning/planner.py` now selects services, judges relevance and writes tasks/tests/questions through model tasks (`intelligence/tasks.py`); structural traversal and candidate gathering stay deterministic; every claim is guarded against the evidence registry; trust labels are derived from the cited evidence, never from the model. |
+| A10-A13 conflicts, standard bypass, reuse, risk labels | Removed. `knowledge/judgments.py` asks the model; findings must quote text that literally exists in the source or they are discarded. Open blockers are now a structural fact (open ticket with a `blocks` link). |
+| A14-A15 query handling and scoring | Removed (stop words, IDF filter, code-token regex, boosts, similarity floors). Replaced by model query analysis + rerank. Left: reciprocal-rank fusion with equal weights; exact lookup of tokens that are verbatim ticket keys / decision ids (pinned first). |
+| A16 offline provider | Honest now: `has_llm=False`, `semantic_embeddings=False`. Search is lexical only, nothing is embedded, every judgment raises `LLMUnavailable` unless a cached judgment exists (replay). |
+| A17 remember/override | Remember keyed by full-text hash (no 200-char key); override rule is free text. |
+| C embed prefix `[:2000]`, snippet `[:240]`, planner `[:12]/[:8]/[:6]`, ownership cap 4, override `[:140]` | Removed: every chunk of every record is embedded; snippets are the matching chunk/fragment; the planner packs evidence by a configurable prompt budget and reports what was left out; ownership facts are all passed to the model to judge. |
+| C importer limits | Issue/PR bodies are no longer truncated; every dropped file is counted by reason in `manifest.json` (`dropped`), and the API-driven limits (100 issues/PRs, 300 commits, 15 changelog versions) are recorded in `limits`. |
+
+Remaining limits that are budgets, not relevance rules (all in `config.py`): `rerank_pool`, `evidence_budget_chars`,
+`judge_batch_size`, chunk size 1800 chars, commits are not embedded.
+
+**Not verifiable yet:** none of the model tasks has run against a real model (no provider credentials). They are
+covered by guard/wiring tests with a scripted model only. Quality must be measured with `scripts/evaluate.py`
+and `scripts/oss_probe.py` once `PROVIDER=gemini|vertex` is configured.
+
+---
+
 Everything below is rule-based logic that either *looks* like intelligence (judging relevance, intent, conflicts,
 violations) or silently throws information away (truncation, caps). Line numbers refer to the audited commit.
 Verdict: **LLM** = replace with a model-based judgment constrained by an evidence guard;

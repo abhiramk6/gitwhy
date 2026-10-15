@@ -1,24 +1,24 @@
 # Open-source probe report
 
-Provider: `offline-deterministic`. Questions were written from general knowledge of Flask/Werkzeug/Jinja/Click/Requests/urllib3, not from the indexed text.
+Provider: `offline`. Questions were written from general knowledge of Flask/Werkzeug/Jinja/Click/Requests/urllib3, not from the indexed text.
 
 ## Questions (top 5)
 
 | Question | First correct source (rank) | Top 3 |
 |---|---|---|
-| Where is the application context pushed during a request in Flask? | rank 1 | flask:docs/appcontext.rst~04-visibility-of-the-context<br>flask:docs/appcontext.rst~06-how-the-context-works<br>flask:docs/extensiondev.rst~05-data-during-a-request |
-| How does Flask sign session cookies? | MISS | flask:docs/web-security.rst~10-set-cookie-options<br>requests:docs/user/advanced.rst~01-session-objects<br>flask:docs/testing.rst~07-accessing-and-modifying-the-session |
-| How does Werkzeug match a URL to an endpoint? | rank 1 | werkzeug:docs/routing.rst~12-websockets<br>werkzeug:docs/tutorial.rst~07-step-4-the-routing<br>werkzeug:docs/tutorial.rst~08-step-5-the-first-view |
-| What does click.echo do differently from print? | rank 1 | click:docs/utils.md~01-printing-to-stdout<br>click:docs/arguments.md~04-environment-variables<br>CLICK-3841 |
-| How does requests handle redirects? | MISS | urllib3:docs/user-guide.rst~16-retrying-requests<br>requests:src/requests/__version__.py<br>requests:README.md |
-| How does urllib3 decide whether to retry a request? | rank 2 | werkzeug:src/werkzeug/exceptions.py<br>urllib3:docs/user-guide.rst~16-retrying-requests<br>urllib3:src/urllib3/util/retry.py |
-| What is the Jinja sandbox for? | rank 1 | JINJA-2206<br>jinja:docs/api.rst~02-high-level-api<br>flask:docs/templating.rst~01-jinja-setup |
-| When was SECRET_KEY_FALLBACKS added to Flask? | rank 1 | flask:changelog/Version-3.1.0.md<br>acme-handbook:runbooks/rotating-session-keys.md<br>acme-handbook:docs/adr/ADR-106-session-key-rotation.md |
-| Who maintains Flask session handling? | rank 5 | flask:docs/testing.rst~07-accessing-and-modifying-the-session<br>requests:docs/user/advanced.rst~01-session-objects<br>flask:docs/quickstart.rst~01-a-minimal-application |
-| What happens if Markup is built from user input? | rank 2 | werkzeug:src/werkzeug/sansio/request.py<br>markupsafe:src/markupsafe/__init__.py<br>flask:docs/tutorial/views.rst~03-login |
-| Why must POST retries use an idempotency key? | rank 5 | itsdangerous:docs/concepts.rst~04-key-rotation<br>urllib3:src/urllib3/util/retry.py<br>urllib3:docs/user-guide.rst~16-retrying-requests |
-| Which decision replaced single-key session signing? | rank 3 | flask:docs/testing.rst~07-accessing-and-modifying-the-session<br>requests:docs/user/advanced.rst~03-prepared-requests<br>acme-handbook:docs/adr/ADR-106-session-key-rotation.md |
-| How does the Django ORM generate migrations? | n/a - out of corpus: a good system returns nothing relevant | jinja:docs/switching.rst~01-django<br>flask:docs/patterns/streaming.rst<br>click:docs/click-concepts.md |
+| Where is the application context pushed during a request in Flask? | rank 1 | flask:docs/appcontext.rst~04-visibility-of-the-context<br>flask:src/flask/ctx.py<br>flask:docs/testing.rst~09-tests-that-depend-on-an-active-context |
+| How does Flask sign session cookies? | rank 1 | acme-handbook:docs/adr/ADR-105-session-signing.md<br>flask:docs/api.rst~05-sessions<br>flask:src/flask/sessions.py |
+| How does Werkzeug match a URL to an endpoint? | rank 1 | werkzeug:docs/routing.rst~12-websockets<br>werkzeug:src/werkzeug/routing/rules.py<br>werkzeug:docs/routing.rst~11-host-matching |
+| What does click.echo do differently from print? | rank 1 | click:docs/utils.md~01-printing-to-stdout<br>click:docs/wincmd.md<br>CLICK-3841 |
+| How does requests handle redirects? | rank 5 | urllib3:docs/user-guide.rst~16-retrying-requests<br>flask:docs/api.rst~19-url-route-registrations<br>flask:docs/lifecycle.rst~04-how-a-request-is-handled |
+| How does urllib3 decide whether to retry a request? | rank 1 | urllib3:src/urllib3/util/retry.py<br>requests:src/requests/adapters.py<br>requests:src/requests/sessions.py |
+| What is the Jinja sandbox for? | rank 1 | jinja:docs/sandbox.rst~00-sandbox<br>jinja:docs/sandbox.rst~03-operator-intercepting<br>jinja:changelog/Version-3.1.5.md |
+| When was SECRET_KEY_FALLBACKS added to Flask? | rank 1 | flask:changelog/Version-3.1.0.md<br>flask:src/flask/app.py<br>flask:src/flask/sessions.py |
+| Who maintains Flask session handling? | rank 2 | flask:docs/quickstart.rst~09-about-responses<br>flask:src/flask/sessions.py<br>flask:src/flask/app.py |
+| What happens if Markup is built from user input? | rank 3 | jinja:src/jinja2/filters.py<br>click:src/click/testing.py<br>markupsafe:src/markupsafe/__init__.py |
+| Why must POST retries use an idempotency key? | MISS | werkzeug:src/werkzeug/datastructures/headers.py<br>werkzeug:src/werkzeug/datastructures/structures.py<br>urllib3:src/urllib3/poolmanager.py |
+| Which decision replaced single-key session signing? | MISS | flask:src/flask/sessions.py<br>flask:docs/config.rst~03-builtin-configuration-values<br>requests:src/requests/sessions.py |
+| How does the Django ORM generate migrations? | n/a - out of corpus: a good system returns nothing relevant | flask:docs/patterns/streaming.rst<br>flask:src/flask/helpers.py<br>jinja:src/jinja2/environment.py |
 
 **Answered within top 5: 10/12**
 
@@ -26,33 +26,17 @@ Provider: `offline-deterministic`. Questions were written from general knowledge
 
 ### Add CSRF protection to Flask forms
 
-Components: flask (primary, inferred), click (downstream-dependency, verified), itsdangerous (downstream-dependency, verified), jinja (downstream-dependency, verified), markupsafe (downstream-dependency, verified), werkzeug (downstream-dependency, verified)
-
-Decisions: ADR-101, ADR-102, ADR-104, ADR-106, ADR-107, ADR-108
-
-Risks: 4; tasks: 7; open questions: 3
+Not planned: `llm_required`.
 
 ### Make Jinja templates compile once and be cached across processes
 
-Components: jinja (primary, inferred), markupsafe (downstream-dependency, verified), flask (upstream-consumer, verified)
-
-Decisions: ADR-101, ADR-102, ADR-104, ADR-106, ADR-107
-
-Risks: 2; tasks: 3; open questions: 2
+Not planned: `llm_required`.
 
 ### Upgrade urllib3 to the next major version
 
-Components: urllib3 (primary, inferred), requests (upstream-consumer, verified)
-
-Decisions: ADR-103, ADR-108
-
-Risks: 1; tasks: 2; open questions: 2
+Not planned: `llm_required`.
 
 ### Rewrite Flask in Rust
 
-Components: flask (primary, inferred), click (downstream-dependency, verified), itsdangerous (downstream-dependency, verified), jinja (downstream-dependency, verified), markupsafe (downstream-dependency, verified), werkzeug (downstream-dependency, verified)
-
-Decisions: ADR-101, ADR-102, ADR-104, ADR-106, ADR-107, ADR-108
-
-Risks: 4; tasks: 7; open questions: 3
+Not planned: `llm_required`.
 
