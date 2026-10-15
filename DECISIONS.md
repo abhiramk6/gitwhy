@@ -4,12 +4,13 @@ One line per non-trivial decision: what, and why. Newest first. Owner-pending it
 repeated (not re-sent) in each hourly update until answered.
 
 ## Waiting on owner
-- **Backup Gemini key for INDEX embeddings** (asked 2026-10-15): may the OSS embedding passes also use the backup key's separate daily quota? Would finish about 00:30 UTC Oct 16 instead of Oct 19 00:05 UTC. Default stays OFF (plan A unchanged) until you answer.
+_none blocking._
 
 Also, one-time ask at the next milestone (dev-only partial B): review of the OSS dev lists and
 `excluded_subjects`, which are **agent-confirmed, not human-reviewed**.
 
 ## Log (UTC, server clock)
+- 2026-10-15 20:10 — Owner answered (Telegram): go with the recommendation = NO. Backup key is NOT used for index embeddings; plan A and its schedule (full coverage Oct 19 00:05 UTC) stay as pinned. `EMBED_BACKUP_FOR_INDEX` stays off.
 - 2026-10-15 20:05 — Owner supplied a backup Gemini key (another project): stored in ~/.config/lore/gemini.env (mode 600, not in git). Wired as fallback for generation and for QUERY embeddings; INDEX embeddings stay on the primary key (plan A unchanged) pending owner's answer, since using it would speed the pinned schedule.
 - 2026-10-15 19:55 — Dev scoring wired to eval/oss_dev_lists.json (required / excluded / unlisted-review; excluded_subjects on dev only). Lists are **agent-confirmed, not human-reviewed**, as delegated by the owner; reports say so; one review request at the next milestone. Held-out scoring is NOT wired (needs frozen prompts + complete embeddings).
 - 2026-10-15 19:45 — PR review drafting added (backend/app/review): local files only (reviews/, gitignored), no network code, no post path (test-enforced); same evidence guard as the planner plus quote check for violations, superseded decisions never reported as violations, dependency-impact must cite a consumer edge. Developed and checked on Northwind dev PRs only; never against held-out cases.
