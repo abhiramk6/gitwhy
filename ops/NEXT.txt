@@ -1,0 +1,1 @@
+PR-review drafts (local only) while embeddings wait; wire dev scoring; dev-only partial B after the docs tier completes.
