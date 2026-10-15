@@ -137,3 +137,25 @@ def test_search_degrades_to_lexical_when_query_embedding_quota_is_exhausted(conn
     hits, meta = search_with_meta(conn, org, prov, "adr body")
     assert meta["semantic"] is False and "quota" in meta["vector_error"]
     assert [h.source_id for h in hits]       # lexical results still returned
+
+
+def test_dev_scoring_buckets_decisions_risks_and_reuse():
+    from _score import score_plan
+
+    case = {"required_decisions": ["ADR-106"], "excluded_decisions": ["ADR-105", "ADR-103"],
+            "allowed_subjects": [{"glob": "flask:src/flask/sessions.py", "why": "x"}],
+            "excluded_subjects": [{"glob": "werkzeug:src/werkzeug/datastructures/*", "why": "noise"}],
+            "allowed_reuse_components": [{"name": "itsdangerous", "why": "signer"}]}
+    plan = {"decisions": [{"adr": "ADR-106"}, {"adr": "ADR-101"}, {"adr": "ADR-103"}],
+            "evidence": {"file:flask:src/flask/sessions.py": {"label": "x", "source": None},
+                         "fact:1": {"label": "A authored 9/10 commits to werkzeug/src/werkzeug/datastructures/headers.py",
+                                    "source": None}},
+            "risks": [{"summary": "sessions risk", "evidence": ["file:flask:src/flask/sessions.py"]},
+                      {"summary": "noise", "evidence": ["fact:1"]},
+                      {"summary": "no subject", "evidence": []}],
+            "reuse_candidates": [{"summary": "use itsdangerous Signer"}, {"summary": "use click helpers"}]}
+    r = score_plan(plan, case, {"flask", "werkzeug", "itsdangerous", "click"})
+    assert r["decisions_missing"] == [] and r["decisions_excluded_present"] == ["ADR-103"]
+    assert r["decisions_unlisted"] == ["ADR-101"]
+    assert r["risks_ok"] == 1 and len(r["risks_excluded"]) == 1 and len(r["risks_unlisted"]) == 1
+    assert r["reuse_ok"] == 1 and len(r["reuse_unlisted"]) == 1 and r["fail"] is True

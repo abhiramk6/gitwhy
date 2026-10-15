@@ -4,10 +4,11 @@ One line per non-trivial decision: what, and why. Newest first. Owner-pending it
 repeated (not re-sent) in each hourly update until answered.
 
 ## Waiting on owner
-_none blocking._ One-time asks at the next milestone (dev-only partial B): review of the OSS/Northwind allowlists and
+_none blocking._ One-time ask at the next milestone (dev-only partial B): review of the OSS dev lists and
 `excluded_subjects`, which are **agent-confirmed, not human-reviewed**.
 
 ## Log (UTC, server clock)
+- 2026-10-15 19:55 — Dev scoring wired to eval/oss_dev_lists.json (required / excluded / unlisted-review; excluded_subjects on dev only). Lists are **agent-confirmed, not human-reviewed**, as delegated by the owner; reports say so; one review request at the next milestone. Held-out scoring is NOT wired (needs frozen prompts + complete embeddings).
 - 2026-10-15 19:45 — PR review drafting added (backend/app/review): local files only (reviews/, gitignored), no network code, no post path (test-enforced); same evidence guard as the planner plus quote check for violations, superseded decisions never reported as violations, dependency-impact must cite a consumer edge. Developed and checked on Northwind dev PRs only; never against held-out cases.
 - 2026-10-15 19:40 — Hourly status runs as its own tmux process (lore:hourly), independent of the agent session; does not survive a host reboot.
 - 2026-10-15 19:38 — Search degrades to lexical when the query-embedding quota is exhausted, instead of failing.

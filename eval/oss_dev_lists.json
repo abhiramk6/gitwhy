@@ -1,0 +1,324 @@
+{
+  "_confirmation": "agent-confirmed, not human-reviewed (owner delegated confirmation on 2026-10-15; to be reviewed once at the next milestone)",
+  "_buckets": "Decisions: required (must appear), excluded (FAIL if present), unlisted (everything else: reported + reviewed on dev, never auto-failed). Risks/reuse: allowed = relevant and acceptable; anything else is unlisted/review.",
+  "_precedence": "excluded_subjects are checked first and win over allowed_subjects (globs use fnmatch: '*' crosses '/').",
+  "_excluded_provenance": "excluded_subjects were drafted AFTER the author had seen output of the earlier rule-based (pre-LLM, commit a7fccfa) planner, which listed bus-factor risks about unrelated werkzeug datastructures files and unrelated libraries for these requests. They are therefore informed by that output and are used on DEV cases only. Held-out cases have no excluded_subjects; their unlisted risks and reuse are reported as counts only.",
+  "_scope": "DEV cases only. Held-out scoring is separate and counts-only.",
+  "org_slug": "oss-pallets",
+  "cases": [
+    {
+      "id": "D1",
+      "request": "Let Flask session cookies survive a secret key rotation without logging users out",
+      "required_decisions": [
+        "ADR-106"
+      ],
+      "excluded_decisions": [
+        "ADR-105",
+        "ADR-102",
+        "ADR-103",
+        "ADR-104",
+        "ADR-107",
+        "ADR-108"
+      ],
+      "unlisted_note": "ADR-101: no dependency version is being changed -> reviewed, not failed.",
+      "allowed_subjects": [
+        {
+          "glob": "flask:src/flask/sessions.py",
+          "why": "Cookie session implementation"
+        },
+        {
+          "glob": "flask:src/flask/config.py",
+          "why": "SECRET_KEY / SECRET_KEY_FALLBACKS configuration"
+        },
+        {
+          "glob": "itsdangerous:src/itsdangerous/*",
+          "why": "Signing library behind session cookies"
+        },
+        {
+          "glob": "acme-handbook:docs/adr/ADR-106-*",
+          "why": "Governing decision"
+        },
+        {
+          "glob": "acme-handbook:runbooks/rotating-session-keys.md",
+          "why": "Rotation procedure"
+        },
+        {
+          "glob": "acme-handbook:runbooks/postmortem-PM-2025-11-session-logout.md",
+          "why": "Prior incident: mass logout on rotation"
+        }
+      ],
+      "allowed_reuse_components": [
+        {
+          "name": "flask",
+          "why": "SECRET_KEY_FALLBACKS already exists"
+        },
+        {
+          "name": "itsdangerous",
+          "why": "Signer key rotation support"
+        }
+      ],
+      "excluded_subjects": [
+        {
+          "glob": "werkzeug:src/werkzeug/datastructures/*",
+          "why": "HTTP header/ETag/Accept structures: nothing to do with cookie signing (appeared as bus-factor noise in the old plan)"
+        },
+        {
+          "glob": "flask:src/flask/ctx.py",
+          "why": "Request-context internals; not touched by key rotation (appeared as bus-factor noise in the old plan)"
+        },
+        {
+          "glob": "click:*",
+          "why": "CLI framework: no role in session signing"
+        },
+        {
+          "glob": "requests:*",
+          "why": "Outbound HTTP client: no role in session signing"
+        },
+        {
+          "glob": "urllib3:*",
+          "why": "Outbound HTTP transport: no role in session signing"
+        },
+        {
+          "glob": "jinja:*",
+          "why": "Templating: no role in session signing"
+        }
+      ]
+    },
+    {
+      "id": "D2",
+      "request": "Change markupsafe escape() so it also escapes backtick characters",
+      "required_decisions": [
+        "ADR-102"
+      ],
+      "excluded_decisions": [
+        "ADR-105",
+        "ADR-106",
+        "ADR-103",
+        "ADR-104",
+        "ADR-107",
+        "ADR-108"
+      ],
+      "unlisted_note": "ADR-101 moved from 'allowed' to unlisted (review). Consistent rule: ADR-101 applies when the request changes the VERSION of a Pallets package (as in the held-out Jinja upgrade case); a behaviour change inside markupsafe only reaches that rule when it is released and consumers bump it, which the request does not ask for.",
+      "allowed_subjects": [
+        {
+          "glob": "markupsafe:src/markupsafe/*",
+          "why": "escape() implementation"
+        },
+        {
+          "glob": "markupsafe:docs/escaping.rst",
+          "why": "Escaping documentation"
+        },
+        {
+          "glob": "jinja:src/jinja2/*",
+          "why": "Consumer of escape(): blast radius"
+        },
+        {
+          "glob": "flask:src/flask/*.py",
+          "why": "Consumer of escape(): blast radius"
+        },
+        {
+          "glob": "werkzeug:src/werkzeug/*.py",
+          "why": "Consumer of escape(): blast radius"
+        },
+        {
+          "glob": "acme-handbook:docs/adr/ADR-102-*",
+          "why": "Governing decision (security sign-off)"
+        },
+        {
+          "glob": "acme-handbook:runbooks/upgrading-markupsafe-and-jinja.md",
+          "why": "Procedure for shipping a markupsafe change"
+        }
+      ],
+      "allowed_reuse_components": [
+        {
+          "name": "markupsafe",
+          "why": "escape() is the single implementation to modify"
+        }
+      ],
+      "excluded_subjects": [
+        {
+          "glob": "werkzeug:src/werkzeug/datastructures/*",
+          "why": "Header/ETag/Accept structures do not call escape() (appeared as bus-factor noise in the old plan); wins over the broad werkzeug consumer glob"
+        },
+        {
+          "glob": "click:*",
+          "why": "CLI framework: does not consume markupsafe.escape"
+        },
+        {
+          "glob": "requests:*",
+          "why": "HTTP client: no escaping involved"
+        },
+        {
+          "glob": "urllib3:*",
+          "why": "HTTP transport: no escaping involved"
+        },
+        {
+          "glob": "itsdangerous:*",
+          "why": "Signing library: no escaping involved"
+        }
+      ]
+    },
+    {
+      "id": "D3",
+      "request": "Add retry with exponential backoff to outbound HTTP calls made through requests",
+      "required_decisions": [
+        "ADR-103"
+      ],
+      "excluded_decisions": [
+        "ADR-105",
+        "ADR-106",
+        "ADR-102",
+        "ADR-107",
+        "ADR-101"
+      ],
+      "unlisted_note": "ADR-104 and ADR-108 (CLI) have requests/click scope but are not about HTTP retries -> reviewed.",
+      "allowed_subjects": [
+        {
+          "glob": "requests:src/requests/adapters.py",
+          "why": "HTTPAdapter mounts the Retry"
+        },
+        {
+          "glob": "requests:src/requests/sessions.py",
+          "why": "Session adapters and timeouts"
+        },
+        {
+          "glob": "urllib3:src/urllib3/util/retry.py",
+          "why": "Retry object"
+        },
+        {
+          "glob": "urllib3:src/urllib3/util/timeout.py",
+          "why": "Timeout object"
+        },
+        {
+          "glob": "acme-handbook:runbooks/http-client-reliability.md",
+          "why": "Team runbook"
+        },
+        {
+          "glob": "acme-handbook:docs/adr/ADR-103-*",
+          "why": "Governing decision"
+        }
+      ],
+      "allowed_reuse_components": [
+        {
+          "name": "urllib3",
+          "why": "Retry is the mandated mechanism"
+        },
+        {
+          "name": "requests",
+          "why": "HTTPAdapter"
+        }
+      ],
+      "excluded_subjects": [
+        {
+          "glob": "flask:*",
+          "why": "Web framework: not on the requests/urllib3 retry path"
+        },
+        {
+          "glob": "werkzeug:*",
+          "why": "WSGI toolkit: not on the requests/urllib3 retry path"
+        },
+        {
+          "glob": "jinja:*",
+          "why": "Templating: unrelated"
+        },
+        {
+          "glob": "markupsafe:*",
+          "why": "Escaping: unrelated"
+        },
+        {
+          "glob": "itsdangerous:*",
+          "why": "Signing: unrelated"
+        }
+      ]
+    },
+    {
+      "id": "D4",
+      "request": "Add shell completion for a new Click command group",
+      "required_decisions": [
+        "ADR-104"
+      ],
+      "excluded_decisions": [
+        "ADR-105",
+        "ADR-106",
+        "ADR-102",
+        "ADR-103",
+        "ADR-107",
+        "ADR-101"
+      ],
+      "unlisted_note": "ADR-108 (CLI error output) is plausibly relevant to a new command group -> reviewed.",
+      "allowed_subjects": [
+        {
+          "glob": "click:src/click/shell_completion.py",
+          "why": "Completion machinery"
+        },
+        {
+          "glob": "click:docs/*completion*",
+          "why": "Completion documentation"
+        },
+        {
+          "glob": "click:src/click/core.py",
+          "why": "Command groups"
+        },
+        {
+          "glob": "click:src/click/decorators.py",
+          "why": "Group/command decorators"
+        },
+        {
+          "glob": "acme-handbook:docs/adr/ADR-104-*",
+          "why": "Governing decision"
+        }
+      ],
+      "allowed_reuse_components": [
+        {
+          "name": "click",
+          "why": "Built-in shell completion"
+        }
+      ],
+      "excluded_subjects": [
+        {
+          "glob": "werkzeug:src/werkzeug/datastructures/*",
+          "why": "HTTP structures: unrelated to CLI completion (appeared as bus-factor noise in the old plan)"
+        },
+        {
+          "glob": "requests:*",
+          "why": "HTTP client: unrelated to CLI completion"
+        },
+        {
+          "glob": "urllib3:*",
+          "why": "HTTP transport: unrelated to CLI completion"
+        },
+        {
+          "glob": "jinja:*",
+          "why": "Templating: unrelated"
+        },
+        {
+          "glob": "markupsafe:*",
+          "why": "Escaping: unrelated"
+        },
+        {
+          "glob": "itsdangerous:*",
+          "why": "Signing: unrelated"
+        }
+      ]
+    },
+    {
+      "id": "D5",
+      "request": "Add GraphQL subscriptions backed by a Kafka event stream",
+      "expect_status": "insufficient_evidence",
+      "required_decisions": [],
+      "excluded_decisions": [
+        "ADR-101",
+        "ADR-102",
+        "ADR-103",
+        "ADR-104",
+        "ADR-105",
+        "ADR-106",
+        "ADR-107",
+        "ADR-108"
+      ],
+      "allowed_subjects": [],
+      "allowed_reuse_components": [],
+      "excluded_subjects": []
+    }
+  ]
+}

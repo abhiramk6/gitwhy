@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from _report import CaseMeter, Tally, evidential, header  # noqa: E402
+from _score import score_plan  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.db import connect  # noqa: E402
 from app.models.provider import make_provider  # noqa: E402
@@ -30,8 +31,12 @@ def main() -> int:
     s = get_settings()
     prov = make_provider(s)
     tally = Tally()
+    lists = json.loads((ROOT / "eval" / "oss_dev_lists.json").read_text())
+    by_request = {c["request"]: c for c in lists["cases"]}
+    review_items: list[str] = []
     with connect() as conn:
         org = conn.execute("SELECT id FROM organizations WHERE slug=%s", (cases["org_slug"],)).fetchone()["id"]
+        repos = {r["name"] for r in conn.execute("SELECT name FROM repositories WHERE organization_id=%s", (org,))}
         out = [f"# Open-source demo report ({cases['org_slug']})", "",
                "Real public GitHub history for 8 repositories plus a synthetic team-knowledge overlay "
                "(ADR-101..108, runbooks).", ""]
@@ -69,6 +74,14 @@ def main() -> int:
                 problems += [f"missing {x}" for x in c.get("expect_decisions", []) if x not in adrs]
                 problems += [f"should not include {x}" for x in c.get("exclude_decisions", []) if x in adrs]
                 problems += unsupported_claims(plan)
+            sc = score_plan(plan, by_request[c["request"]], repos) if c["request"] in by_request else None
+            if sc:
+                problems += [f"required decision missing: {x}" for x in sc["decisions_missing"]]
+                problems += [f"excluded decision present: {x}" for x in sc["decisions_excluded_present"]]
+                problems += [f"excluded subject in risk: {x['subject']}" for x in sc["risks_excluded"]]
+                review_items += [f"[{c['request'][:40]}…] decision {x} (unlisted)" for x in sc["decisions_unlisted"]]
+                review_items += [f"[{c['request'][:40]}…] risk (unlisted): {x['summary']}" for x in sc["risks_unlisted"]]
+                review_items += [f"[{c['request'][:40]}…] reuse (unlisted): {x['summary']}" for x in sc["reuse_unlisted"]]
             tally.add("FAIL" if problems else "PASS", c.get("split", "dev"))
             body += [f"### {'PASS' if not problems else 'FAIL'} — {c['request']}", "",
                      f"_Why this case:_ {c['why']}", "",
@@ -82,6 +95,11 @@ def main() -> int:
             body += ["| Component | Role | Label | Reason |", "|---|---|---|---|"]
             body += [f"| {x['service']} | {x['role']} | {x['label']} | {x['reason']} |" for x in plan["affected_components"]]
             body += ["", "Governing decisions: " + (", ".join(f"{d['adr']} ({d['label']})" for d in plan["decisions"]) or "none"), ""]
+            if sc:
+                body += [f"_Bucket counts (dev):_ decisions required-missing {len(sc['decisions_missing'])} · excluded-present "
+                         f"{len(sc['decisions_excluded_present'])} · unlisted {len(sc['decisions_unlisted'])}; risks ok "
+                         f"{sc['risks_ok']} · excluded {len(sc['risks_excluded'])} · unlisted {len(sc['risks_unlisted'])}; "
+                         f"reuse ok {sc['reuse_ok']} · unlisted {len(sc['reuse_unlisted'])}", ""]
             for r in plan["risks"][:5]:
                 body.append(f"- risk [{r['label']}] {r['summary']}")
             for t in plan["tasks"][:6]:
@@ -90,6 +108,10 @@ def main() -> int:
         out += ["## Run provenance", ""] + header(prov, conn, org, demo_corpus=True) + [""] + body
         is_evidence, _why = evidential(conn, org, prov)
     fails = tally.failed
+    out += ["## Scoring lists", "",
+            f"- Lists: `eval/oss_dev_lists.json` — **{lists['_confirmation']}**. {lists['_excluded_provenance']}",
+            f"- Unlisted items for review (dev only; not auto-failed): **{len(review_items)}**", ""]
+    out += [f"  - {x}" for x in review_items] + [""]
     out += ["---", f"**Result: {tally.line()}**", f"**Failed expectations: {fails}**"]
     target = Path(a.out)
     if not is_evidence and a.out == str(ROOT / "docs" / "oss-demo-report.md"):
