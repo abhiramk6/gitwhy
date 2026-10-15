@@ -1,0 +1,8 @@
+.env
+*.env
+__pycache__/
+node_modules/
+.venv/
+*.pem
+*.key
+ops/logs/
