@@ -36,6 +36,7 @@ class Stats:
     new: int = 0
     changed: int = 0
     unchanged: int = 0
+    pruned: int = 0
     by_type: dict[str, int] = field(default_factory=dict)
 
 
@@ -127,12 +128,14 @@ def ingest(conn: psycopg.Connection, root: Path, mode: str = "backfill") -> tupl
         "INSERT INTO ingestion_runs (organization_id, source, mode) VALUES (%s,%s,%s) RETURNING id",
         (org_id, SOURCE, mode)).fetchone()["id"]
     st = Stats()
+    seen_keys: set[tuple[str, str]] = set()
     newest = cursor or ""
     try:
         for rec in iter_records(root):
             if cursor and rec.when and rec.when <= cursor:
                 continue  # already ingested in an earlier run
             st.seen += 1
+            seen_keys.add((rec.source_type, rec.source_id))
             st.by_type[rec.source_type] = st.by_type.get(rec.source_type, 0) + 1
             if rec.when and rec.when > newest:
                 newest = rec.when
@@ -154,6 +157,16 @@ def ingest(conn: psycopg.Connection, root: Path, mode: str = "backfill") -> tupl
                 st.new += 1
             else:
                 st.changed += 1
+        if mode == "backfill":
+            # A full backfill is authoritative for file-like sources: drop records whose source no longer exists
+            # (deleted/renamed files, re-chunked docs) together with their embeddings.
+            stale = [r["id"] for r in conn.execute(
+                "SELECT id, source_type, source_id FROM source_records WHERE organization_id=%s "
+                "AND source_type IN ('file','doc','adr')", (org_id,)) if (r["source_type"], r["source_id"]) not in seen_keys]
+            if stale:
+                conn.execute("DELETE FROM embeddings WHERE owner_table='source_records' AND owner_id = ANY(%s)", (stale,))
+                conn.execute("DELETE FROM source_records WHERE id = ANY(%s)", (stale,))
+            st.pruned = len(stale)
         if newest:
             conn.execute(
                 "INSERT INTO ingestion_cursors (organization_id, source, cursor) VALUES (%s,%s,%s) "

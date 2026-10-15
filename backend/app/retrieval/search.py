@@ -13,6 +13,7 @@ from ..models.provider import Provider
 from .embed import _vec
 
 RRF_K = 60
+SUPERSEDED_FACTOR = 0.3
 ID_PATTERN = re.compile(r"\b([A-Z]{2,5}-\d+)\b")
 _SOURCE_TYPES = ("adr", "doc", "github_pr", "jira_issue", "file")
 
@@ -37,12 +38,24 @@ class Hit:
         return (self.kind, self.id)
 
 
+# Code-like tokens (SECRET_KEY_FALLBACKS, wrap_str_format, getUser): a user who types one wants records that
+# literally contain it, and such a token is far more selective than any embedding similarity.
+CODE_TOKEN = re.compile(r"\b(?:[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+|[a-z]+(?:[A-Z][a-z0-9]+)+)\b")
+
+
 def _identifiers(conn, org, original: str) -> list[tuple[str, int]]:
-    """Records whose id exactly equals an identifier named in the raw query (ticket keys, ADR ids)."""
+    """Records whose id equals an identifier named in the raw query (ticket keys, ADR ids), then records that
+    literally contain a code-like token from the query, best full-text match first."""
     out: list[tuple[str, int]] = []
     for ident in ID_PATTERN.findall(original):
         for r in conn.execute("SELECT id FROM source_records WHERE organization_id=%s AND source_id=%s "
                               "AND source_type = ANY(%s)", (org, ident, list(_SOURCE_TYPES))):
+            out.append(("record", r["id"]))
+    for tok in dict.fromkeys(CODE_TOKEN.findall(original)):
+        for r in conn.execute(
+                "SELECT id FROM source_records WHERE organization_id=%s AND source_type = ANY(%s) AND search_tsv @@ "
+                "plainto_tsquery('english', %s) ORDER BY ts_rank_cd(search_tsv, plainto_tsquery('english', %s), 1) "
+                "DESC, id LIMIT 6", (org, list(_SOURCE_TYPES), tok, tok)):
             out.append(("record", r["id"]))
     return list(dict.fromkeys(out))
 
@@ -60,10 +73,33 @@ def _keyword(conn, org, q: str, limit: int) -> list[tuple[str, int]]:
     return list(dict.fromkeys(ranked))
 
 
-def _or_query(q: str) -> str:
-    """Natural-language questions rarely match every term; OR the content words for recall."""
-    words = [w for w in re.findall(r"[A-Za-z0-9_+\-]{3,}", q.lower())]
-    return " or ".join(dict.fromkeys(words))
+_STOP = {"how", "does", "what", "when", "where", "who", "which", "why", "the", "and", "for", "with", "this",
+         "that", "are", "was", "can", "use", "used", "using", "into", "from", "have", "has", "not", "you", "your",
+         "must", "should", "would", "could", "may", "does", "did", "will", "about", "there", "their", "they"}
+IDF_MIN_RECORDS = 500   # below this the corpus is too small for document-frequency filtering to mean anything
+IDF_MAX_SHARE = 0.25    # a term present in more than this share of records says nothing about relevance
+
+
+def _terms(conn, org, q: str) -> list[str]:
+    """Content words of a natural-language query, minus words so common in this corpus that they only add noise
+    (e.g. a project's own name inside its docs). Always keeps the two most selective words."""
+    words = list(dict.fromkeys(w for w in re.findall(r"[A-Za-z0-9_+\-]{3,}", q.lower()) if w not in _STOP))
+    n = conn.execute("SELECT count(*) AS n FROM source_records WHERE organization_id=%s", (org,)).fetchone()["n"]
+    if n < IDF_MIN_RECORDS or len(words) <= 2:
+        return words
+    df = {w: conn.execute("SELECT count(*) AS n FROM source_records WHERE organization_id=%s AND search_tsv @@ "
+                          "plainto_tsquery('english', %s)", (org, w)).fetchone()["n"] for w in words}
+    kept = [w for w in words if df[w] <= IDF_MAX_SHARE * n]
+    return kept if len(kept) >= 2 else sorted(words, key=lambda w: df[w])[:2]
+
+
+def _keyword_ranked(conn, org, q: str, terms: list[str], limit: int) -> list[tuple[str, int]]:
+    """Records matching ALL selective terms rank ahead of records matching any of them."""
+    if not terms:
+        return _keyword(conn, org, q, limit)
+    both = _keyword(conn, org, " ".join(terms), limit) if len(terms) > 1 else []
+    anyx = _keyword(conn, org, " or ".join(terms), limit)
+    return list(dict.fromkeys(both + anyx))[:limit]
 
 
 def _vector(conn, org, provider: Provider, q: str, limit: int) -> list[tuple[tuple[str, int], float]]:
@@ -117,7 +153,7 @@ def _hydrate(conn, keys: list[tuple[str, int]]) -> dict[tuple[str, int], Hit]:
 def search(conn: psycopg.Connection, org_id: int, provider: Provider, query: str, k: int = 10,
            per_signal: int = 25) -> list[Hit]:
     ident = _identifiers(conn, org_id, query)
-    kw = _keyword(conn, org_id, _or_query(query) or query, per_signal)
+    kw = _keyword_ranked(conn, org_id, query, _terms(conn, org_id, query), per_signal)
     vec_scored = _vector(conn, org_id, provider, query, per_signal)
     # Nearest-neighbour search always returns *something*. Without lexical evidence, only accept
     # vector matches that clear the provider's calibrated similarity floor.
@@ -131,8 +167,20 @@ def search(conn: psycopg.Connection, org_id: int, provider: Provider, query: str
         for rank, key in enumerate(lst, 1):
             scores[key] = scores.get(key, 0.0) + weight / (RRF_K + rank)
             signals.setdefault(key, {})[name] = rank
-    top = sorted(scores, key=lambda x: (-scores[x], x))[:k]
+    top = sorted(scores, key=lambda x: (-scores[x], x))[:k * 2]
     hyd = _hydrate(conn, top)
+    # A superseded decision is history, not guidance: keep it findable but never let it outrank current evidence.
+    adr_ids = [h.source_id for h in hyd.values() if h.source_type == "adr"]
+    if adr_ids:
+        gone = {r["source_id"] for r in conn.execute(
+            "SELECT DISTINCT source_id FROM facts WHERE organization_id=%s AND fact_type='decision' AND "
+            "source_type='adr' AND status='superseded' AND source_id = ANY(%s)", (org_id, adr_ids))}
+        for key, h in hyd.items():
+            if h.source_id in gone and h.source_type == "adr":
+                scores[key] *= SUPERSEDED_FACTOR
+                h.status = "superseded"
+        top = sorted(top, key=lambda x: (-scores[x], x))
+    top = top[:k]
     hits = []
     for key in top:
         if key in hyd:

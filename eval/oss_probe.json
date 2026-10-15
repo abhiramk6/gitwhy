@@ -1,0 +1,24 @@
+{
+  "org_slug": "oss-pallets",
+  "questions": [
+    {"q": "Where is the application context pushed during a request in Flask?", "expect": ["flask:src/flask/ctx.py", "flask:src/flask/app.py", "flask:docs/appcontext.rst"]},
+    {"q": "How does Flask sign session cookies?", "expect": ["flask:src/flask/sessions.py", "ADR-105", "ADR-106", "itsdangerous:"]},
+    {"q": "How does Werkzeug match a URL to an endpoint?", "expect": ["werkzeug:src/werkzeug/routing/", "werkzeug:docs/routing.rst"]},
+    {"q": "What does click.echo do differently from print?", "expect": ["click:src/click/utils.py", "click:docs/utils.md"]},
+    {"q": "How does requests handle redirects?", "expect": ["requests:src/requests/sessions.py", "redirect"]},
+    {"q": "How does urllib3 decide whether to retry a request?", "expect": ["urllib3:src/urllib3/util/retry.py", "urllib3:docs/user-guide.rst~16-retrying"]},
+    {"q": "What is the Jinja sandbox for?", "expect": ["jinja:src/jinja2/sandbox.py", "jinja:docs/sandbox.rst", "JINJA-2206"]},
+    {"q": "When was SECRET_KEY_FALLBACKS added to Flask?", "expect": ["flask:changelog/Version-3.1.0.md"]},
+    {"q": "Who maintains Flask session handling?", "expect": ["flask:src/flask/sessions.py"]},
+    {"q": "What happens if Markup is built from user input?", "expect": ["ADR-102", "markupsafe:"]},
+    {"q": "Why must POST retries use an idempotency key?", "expect": ["ADR-103"]},
+    {"q": "Which decision replaced single-key session signing?", "expect": ["ADR-106"]},
+    {"q": "How does the Django ORM generate migrations?", "expect": [], "note": "out of corpus: a good system returns nothing relevant"}
+  ],
+  "plans": [
+    "Add CSRF protection to Flask forms",
+    "Make Jinja templates compile once and be cached across processes",
+    "Upgrade urllib3 to the next major version",
+    "Rewrite Flask in Rust"
+  ]
+}

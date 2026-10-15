@@ -65,6 +65,40 @@ def changelog_chunks(repo: str, text: str, limit: int = 15) -> dict[str, str]:
     return out
 
 
+_RST_RULE = re.compile(r"^([=\-~^#*+])\1{2,}\s*$")
+
+
+def chunk_doc(rel: str, text: str, min_len: int = 4000) -> list[tuple[str, str]]:
+    """Split a long reST/markdown document into per-section pieces so retrieval can land on the section that
+    answers a question instead of a whole 'Quickstart' page. Returns [(path, body)]; short docs are returned whole."""
+    if len(text) <= min_len:
+        return [(rel, text)]
+    lines, starts = text.splitlines(), []
+    fence = False
+    for i, ln in enumerate(lines):
+        if ln.lstrip().startswith("```"):
+            fence = not fence
+        if fence:
+            continue
+        if rel.endswith(".md") and re.match(r"^#{1,3} \S", ln):
+            starts.append((i, ln.lstrip("# ").strip()))
+        elif rel.endswith(".rst") and i + 1 < len(lines) and ln.strip() and not ln.startswith((" ", ".. ")) \
+                and _RST_RULE.match(lines[i + 1]) and len(lines[i + 1].rstrip()) >= len(ln.rstrip()):
+            starts.append((i, ln.strip()))
+    if len(starts) < 2:
+        return [(rel, text)]
+    title = starts[0][1]
+    out = []
+    for n, (i, head) in enumerate(starts):
+        end = starts[n + 1][0] if n + 1 < len(starts) else len(lines)
+        body = "\n".join(lines[i:end]).strip()
+        if len(body) < 120:
+            continue
+        slug = re.sub(r"[^a-z0-9]+", "-", head.lower()).strip("-")[:48] or str(n)
+        out.append((f"{rel}~{n:02d}-{slug}", (f"{head}  (section of: {title})\n\n" if n else "") + body))
+    return out or [(rel, text)]
+
+
 def api(url: str) -> list[dict]:
     req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json",
                                                "User-Agent": "lore-intelligence-oss-demo"})
@@ -99,10 +133,12 @@ def main() -> int:
                     text = p.read_text(encoding="utf-8")
                 except UnicodeDecodeError:
                     continue
-                (base / rel).parent.mkdir(parents=True, exist_ok=True)
-                (base / rel).write_text(text, encoding="utf-8")
+                pieces = chunk_doc(rel, text) if kind == "doc" else [(rel, text)]
+                for prel, body in pieces:
+                    (base / prel).parent.mkdir(parents=True, exist_ok=True)
+                    (base / prel).write_text(body, encoding="utf-8")
+                    counts["files" if kind == "file" else "docs"] += 1
                 copied.add(rel)
-                counts["files" if kind == "file" else "docs"] += 1
         for cand in ("CHANGES.rst", "CHANGES.md", "HISTORY.md", "HISTORY.rst"):
             if (clone / cand).is_file():
                 for rel, body in changelog_chunks(name, (clone / cand).read_text(encoding="utf-8", errors="replace")).items():

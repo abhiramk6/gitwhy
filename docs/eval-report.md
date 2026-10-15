@@ -12,12 +12,12 @@ Baselines are measured on the synthetic dataset only; they are not claims about 
 | outbound HTTP must use the platform client with timeouts and retries | ADR-004 in top 5 | PASS | 1 |
 | which decision replaced synchronous calls between payments and ledger | ADR-007 in top 5 | PASS | 1 |
 | why do errors use problem+json in payments | ADR-005 in top 5 | PASS | 1 |
-| duplicate notification sends de-dupe | NTF-27 in top 5 | PASS | 3 |
+| duplicate notification sends de-dupe | NTF-27 in top 5 | PASS | 2 |
 | settlement file reconcile fails on large files | LED-71 in top 5 | PASS | 1 |
 | migrate ledger amounts to wider numeric type | LED-88 in top 5 | PASS | 2 |
 | kubernetes helm chart for the mobile app | no relevant results | SKIPPED: offline hashing embeddings cannot reject unsupported queries; verify with the Vertex provider | – |
 
-- hit rate@k: **7/7**; MRR: **0.83**
+- hit rate@k: **7/7**; MRR: **0.86**
 
 ## Planning
 

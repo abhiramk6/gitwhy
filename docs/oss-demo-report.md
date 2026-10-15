@@ -6,10 +6,10 @@ Provider: `offline-deterministic`. Real public GitHub history for 8 repositories
 
 | Query | Expected (any of) | Rank | Top results | Result |
 |---|---|---|---|---|
-| SECRET_KEY_FALLBACKS | flask:src/flask/sessions.py, acme-handbook:docs/adr/ADR-106-session-key-rotation.md | 1 | acme-handbook:docs/adr/ADR-106-session-key-rotation.md (keyword+vector+graph)<br>acme-handbook:docs/adr/ADR-106-session-key-rotation.md (keyword+vector)<br>acme-handbook:runbooks/rotating-session-keys.md (keyword+vector) | PASS |
-| what did we decide about rotating session signing keys | acme-handbook:docs/adr/ADR-106-session-key-rotation.md | 1 | acme-handbook:docs/adr/ADR-106-session-key-rotation.md (keyword+vector)<br>acme-handbook:runbooks/rotating-session-keys.md (keyword+vector)<br>flask:src/flask/sessions.py (keyword+vector) | PASS |
-| retry with exponential backoff for flaky outbound calls | acme-handbook:docs/adr/ADR-103-outbound-http.md, urllib3:src/urllib3/util/retry.py | 2 | urllib3#5182 (keyword+vector)<br>acme-handbook:docs/adr/ADR-103-outbound-http.md (keyword+vector)<br>acme-handbook:runbooks/http-client-reliability.md (keyword+vector) | PASS |
-| who may wrap text in Markup | acme-handbook:docs/adr/ADR-102-html-escaping.md, markupsafe:src/markupsafe/__init__.py | 3 | markupsafe:README.md (keyword+vector)<br>click:src/click/formatting.py (keyword+vector)<br>acme-handbook:docs/adr/ADR-102-html-escaping.md (vector+graph) | PASS |
+| SECRET_KEY_FALLBACKS | flask:src/flask/sessions.py, acme-handbook:docs/adr/ADR-106-session-key-rotation.md | 2 | acme-handbook:runbooks/rotating-session-keys.md (identifier+keyword+vector)<br>acme-handbook:docs/adr/ADR-106-session-key-rotation.md (identifier+keyword+vector)<br>flask:changelog/Version-3.1.0.md (identifier+keyword) | PASS |
+| what did we decide about rotating session signing keys | acme-handbook:docs/adr/ADR-106-session-key-rotation.md | 1 | acme-handbook:docs/adr/ADR-106-session-key-rotation.md (keyword+vector)<br>acme-handbook:runbooks/rotating-session-keys.md (keyword+vector)<br>acme-handbook:docs/adr/ADR-106-session-key-rotation.md (vector+graph) | PASS |
+| retry with exponential backoff for flaky outbound calls | acme-handbook:docs/adr/ADR-103-outbound-http.md, urllib3:src/urllib3/util/retry.py | 3 | urllib3#5182 (keyword+vector)<br>urllib3:docs/user-guide.rst~17-configuring-exponential-backoff (keyword+vector)<br>acme-handbook:docs/adr/ADR-103-outbound-http.md (keyword+vector) | PASS |
+| who may wrap text in Markup | acme-handbook:docs/adr/ADR-102-html-escaping.md, markupsafe:src/markupsafe/__init__.py | 4 | markupsafe:README.md (keyword+vector)<br>markupsafe:docs/index.rst (keyword+vector)<br>click:src/click/formatting.py (keyword+vector) | PASS |
 | FLASK-6170 | FLASK-6170 | 1 | FLASK-6170 (identifier)<br>werkzeug:docs/middleware/http_proxy.rst (vector)<br>werkzeug#3299 (vector) | PASS |
 
 ## Feature plans
