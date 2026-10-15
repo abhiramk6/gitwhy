@@ -22,6 +22,14 @@ class LLMUnavailable(RuntimeError):
     """Raised when a judgment is needed but no model is configured and no cached judgment exists."""
 
 
+class QuotaExhausted(RuntimeError):
+    """A hard (daily) quota was hit. `retry_after_s` is the API's own RetryInfo. Callers stop; nothing is retried."""
+
+    def __init__(self, message: str, retry_after_s: float):
+        super().__init__(message)
+        self.retry_after_s = retry_after_s
+
+
 class Provider(Protocol):
     name: str
     embed_model: str
@@ -68,7 +76,7 @@ class GeminiProvider:
     RETRIES = 1
     REQUEST_TIMEOUT_MS = 45_000  # a request that hangs counts as a failure, not a stall
     COOLDOWN_S = 300.0  # a model that just failed is tried last for this long (circuit breaker)
-    QUOTA_RETRIES = 8
+    QUOTA_RETRIES = 2  # short per-minute backoff only; no long waits, no outer retry loops
     MAX_QUOTA_WAIT_S = 90.0
     EMBED_REQUEST_CHARS = 30_000   # ~9k tokens
     EMBED_TOKENS_PER_MIN = 24_000  # under the free-tier 30k/min
@@ -119,9 +127,10 @@ class GeminiProvider:
                 wait = self.BACKOFF_S * (attempt + 1)
             except errors.ClientError as exc:
                 delay = self._retry_delay(exc)
-                if getattr(exc, "code", None) != 429 or attempt >= self.RETRIES + self.QUOTA_RETRIES - 1 \
-                        or (delay or 0) > self.MAX_QUOTA_WAIT_S:
-                    raise  # a per-day quota (retry in hours) is not worth waiting for: let the caller change model
+                if getattr(exc, "code", None) == 429 and (delay or 0) > self.MAX_QUOTA_WAIT_S:
+                    raise QuotaExhausted(f"daily quota exhausted; API says retry in {delay:.0f}s", delay) from exc
+                if getattr(exc, "code", None) != 429 or attempt >= self.RETRIES + self.QUOTA_RETRIES - 1:
+                    raise
                 # No RetryInfo = a per-minute throttle: back off progressively (45s, 90s, 120s...) until it clears.
                 wait = (delay + 1.0) if delay else min(45.0 * (attempt - self.RETRIES + 1), 120.0)
             self.usage["retries"] += 1
@@ -203,9 +212,9 @@ class GeminiProvider:
                 except (json.JSONDecodeError, ValueError, TypeError) as exc:
                     last = exc
                     continue
-                except (errors.APIError, httpx.HTTPError) as exc:
+                except (errors.APIError, httpx.HTTPError, QuotaExhausted) as exc:
                     last = exc
-                    self._down_until[model] = time.monotonic() + min(max(self._retry_delay(exc) or 0.0, self.COOLDOWN_S), 21600.0)
+                    self._down_until[model] = time.monotonic() + min(max(getattr(exc, 'retry_after_s', None) or self._retry_delay(exc) or 0.0, self.COOLDOWN_S), 21600.0)
                     break  # unavailable / retired / hung: next model in the chain
                 u = getattr(r, "usage_metadata", None)
                 self.usage["calls"] += 1

@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 from app.config import Settings  # noqa: E402
 from app.intelligence.judge import delta, meter  # noqa: E402
-from app.retrieval.embed import reconcile  # noqa: E402
+from app.retrieval.embed import coverage_text, reconcile, tier_coverage  # noqa: E402
 
 
 @dataclass
@@ -52,6 +52,17 @@ def corpus_models(conn, org_id: int) -> list[tuple[str, int]]:
         (org_id,))]
 
 
+def evidential(conn, org_id: int, prov) -> tuple[bool, str]:
+    """A run counts as evidence only with complete, current embedding coverage for the configured model."""
+    if not prov.semantic_embeddings:
+        return True, ""
+    rc = reconcile(conn, org_id, prov.embed_model)
+    if rc["missing"] or rc["stale_content"]:
+        return False, ("partial embedding coverage: "
+                       + coverage_text(tier_coverage(conn, org_id, prov.embed_model)))
+    return True, ""
+
+
 def header(prov, conn, org_id: int, *, demo_corpus: bool = False) -> list[str]:
     """Provider / models / embedding model per corpus / model-call accounting, as markdown lines."""
     default_embed = Settings.model_fields["embed_model"].default
@@ -63,13 +74,15 @@ def header(prov, conn, org_id: int, *, demo_corpus: bool = False) -> list[str]:
     lines.append("- **Embedding model for this corpus:** "
                  + (", ".join(f"`{m}` ({n} vectors)" for m, n in stored) or "none stored")
                  + f" · configured: `{prov.embed_model}`")
+    ok, why = evidential(conn, org_id, prov)
     if prov.semantic_embeddings:
         rc = reconcile(conn, org_id, prov.embed_model)
-        lines.append(f"- **Embedding coverage (`{prov.embed_model}`):** {rc['stored']} stored of {rc['wanted']} wanted · "
+        tiers = tier_coverage(conn, org_id, prov.embed_model)
+        lines.append(f"- **Embedding coverage (`{prov.embed_model}`), per tier:** {coverage_text(tiers)} · "
                      f"missing {len(rc['missing'])} · stale {len(rc['stale_content'])} · orphaned {len(rc['orphaned'])} "
                      f"· {rc['title_only_empty_body']} empty-body records embedded title-only")
-        if rc["missing"] or rc["stale_content"]:
-            lines.append("- ⚠️ **Embedding coverage is incomplete:** vector results cover only part of this corpus.")
+    if not ok:
+        lines.insert(0, f"> ⚠️ **NON-EVIDENTIAL RUN** — {why}. Development use only; not a result and not to be cited.")
     mixed = len({m for m, _ in stored}) > 1
     if mixed:
         lines.append("- ⚠️ **Mixed embedding models in one corpus** — vectors are not comparable across models; "

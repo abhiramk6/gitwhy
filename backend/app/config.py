@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     gen_fallback_models: str = "gemini-3.7-flash,gemini-3.5-flash-lite"  # comma separated; tried when the primary is overloaded
     embed_model: str = "gemini-embedding-2"
 
+    # Free-tier embedding cap is 1,000 items/day/model: index at most this many per day, reserve the rest for queries.
+    embed_daily_budget: int = 900
+    embed_query_reserve: int = 100
+
     # Candidate-pool and prompt budgets (cost/latency controls, not relevance rules; relevance is the model's job).
     rerank_pool: int = 30
     evidence_budget_chars: int = 60000

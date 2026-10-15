@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
-from _report import CaseMeter, Tally, header  # noqa: E402
+from _report import CaseMeter, Tally, evidential, header  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.db import connect  # noqa: E402
 from app.models.provider import make_provider  # noqa: E402
@@ -88,10 +88,14 @@ def main() -> int:
                 body.append(f"- task [{t.get('label', 'proposed')}] {t['id']} {t['title']}")
             body.append("")
         out += ["## Run provenance", ""] + header(prov, conn, org, demo_corpus=True) + [""] + body
+        is_evidence, _why = evidential(conn, org, prov)
     fails = tally.failed
     out += ["---", f"**Result: {tally.line()}**", f"**Failed expectations: {fails}**"]
-    Path(a.out).write_text("\n".join(out) + "\n")
-    print("\n".join(out[-3:]), f"\nwrote {a.out}")
+    target = Path(a.out)
+    if not is_evidence and a.out == str(ROOT / "docs" / "oss-demo-report.md"):
+        target = ROOT / "docs" / "oss-demo-report.PARTIAL-NON-EVIDENTIAL.md"  # never overwrite the evidential report
+    target.write_text("\n".join(out) + "\n")
+    print("\n".join(out[-3:]), f"\nwrote {target}")
     return tally.exit_code
 
 

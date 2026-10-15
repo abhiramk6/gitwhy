@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT / "scripts"))
-from _report import CaseMeter, Tally, header  # noqa: E402
+from _report import CaseMeter, Tally, evidential, header  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.db import connect  # noqa: E402
 from app.models.provider import make_provider  # noqa: E402
@@ -59,10 +59,12 @@ def main() -> int:
             body.append(f"Risks: {len(p['risks'])}; tasks: {len(p['tasks'])}; open questions: {len(p['open_questions'])}")
             body.append("")
         prov_lines = header(prov, conn, org, demo_corpus=True)
+        is_evidence, _why = evidential(conn, org, prov)
     out = ["# Open-source probe report", "",
            "Questions were written from general knowledge of Flask/Werkzeug/Jinja/Click/Requests/urllib3, not from "
            f"the indexed text. Result: {tally.line()}", "", "## Run provenance", ""] + prov_lines + [""] + body
-    Path(ROOT / "docs" / "oss-probe-report.md").write_text("\n".join(out) + "\n")
+    name = "oss-probe-report.md" if is_evidence else "oss-probe-report.PARTIAL-NON-EVIDENTIAL.md"
+    Path(ROOT / "docs" / name).write_text("\n".join(out) + "\n")
     print("\n".join(out))
     return tally.exit_code
 

@@ -9,11 +9,15 @@ import hashlib
 
 import psycopg
 
-from ..models.provider import Provider
+from ..config import get_settings
+from ..models.provider import Provider, QuotaExhausted
 from .chunk import chunk_spans
 
 EMBED_SOURCE_TYPES = ("adr", "doc", "github_pr", "jira_issue", "file")
 BATCH = 64
+# Embedding priority: the team's decisions and the tickets/PRs that explain them come before prose docs and code.
+TIERS = ("adr", "fact", "jira_issue", "github_pr", "doc", "file")
+TIER_LABEL = {"adr": "ADRs", "fact": "facts", "jira_issue": "issues", "github_pr": "PRs", "doc": "docs", "file": "code"}
 
 
 def _vec(v: list[float]) -> str:
@@ -51,7 +55,53 @@ def reconcile(conn: psycopg.Connection, org_id: int, model: str) -> dict:
             "title_only_empty_body": sum(1 for k, v in want.items() if k[0] == "source_records" and v[2] == 0)}
 
 
-def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider) -> dict:
+def chunk_tiers(conn: psycopg.Connection, org_id: int) -> dict[tuple[str, int, int], str]:
+    """Tier of every wanted chunk (adr/fact/jira_issue/github_pr/doc/file)."""
+    kind = {r["id"]: r["source_type"] for r in conn.execute(
+        "SELECT id, source_type FROM source_records WHERE organization_id=%s", (org_id,))}
+    return {k: ("fact" if k[0] == "facts" else kind.get(k[1], "file")) for k in wanted_chunks(conn, org_id)}
+
+
+def tier_coverage(conn: psycopg.Connection, org_id: int, model: str) -> list[dict]:
+    """Per tier: chunks wanted vs stored (current content) for `model`, in priority order."""
+    want = wanted_chunks(conn, org_id)
+    tiers = chunk_tiers(conn, org_id)
+    have = {(r["owner_table"], r["owner_id"], r["chunk_index"]): r["content_hash"] for r in conn.execute(
+        "SELECT owner_table, owner_id, chunk_index, content_hash FROM embeddings WHERE organization_id=%s AND model=%s",
+        (org_id, model))}
+    out = []
+    for t in TIERS:
+        keys = [k for k, tier in tiers.items() if tier == t]
+        out.append({"tier": t, "label": TIER_LABEL[t], "wanted": len(keys),
+                    "stored": sum(1 for k in keys if have.get(k) == want[k][0])})
+    return out
+
+
+def coverage_text(rows: list[dict]) -> str:
+    return " · ".join(f"{r['label']} {r['stored']}/{r['wanted']}" for r in rows) + \
+        f" · total {sum(r['stored'] for r in rows)}/{sum(r['wanted'] for r in rows)}"
+
+
+def used_today(conn: psycopg.Connection, model: str, kind: str = "index") -> int:
+    r = conn.execute("SELECT items FROM embed_usage WHERE day = (now() AT TIME ZONE 'UTC')::date AND model=%s AND kind=%s",
+                     (model, kind)).fetchone()
+    return r["items"] if r else 0
+
+
+def record_usage(conn: psycopg.Connection, model: str, kind: str, items: int) -> None:
+    conn.execute("INSERT INTO embed_usage (day, model, kind, items) VALUES ((now() AT TIME ZONE 'UTC')::date, %s, %s, %s) "
+                 "ON CONFLICT (day, model, kind) DO UPDATE SET items = embed_usage.items + EXCLUDED.items",
+                 (model, kind, items))
+
+
+def exhausted_until(conn: psycopg.Connection, model: str):
+    r = conn.execute("SELECT exhausted_until FROM quota_state WHERE model=%s AND exhausted_until > now()", (model,)).fetchone()
+    return r["exhausted_until"] if r else None
+
+
+def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider, budget: int | None = None) -> dict:
+    """Embed missing/changed chunks in tier order. `budget` caps items sent in this call (None = unlimited). Stops
+    cleanly on budget or a hard quota; never loops or retries on its own. Progress commits per batch."""
     if not provider.semantic_embeddings:
         return {"candidates": 0, "embedded": 0, "cached": 0, "skipped": "provider has no semantic embeddings"}
     want = wanted_chunks(conn, org_id)
@@ -62,10 +112,33 @@ def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider) -> dict
     for t, i, c in stale:
         conn.execute("DELETE FROM embeddings WHERE organization_id=%s AND model=%s AND owner_table=%s AND owner_id=%s "
                      "AND chunk_index=%s", (org_id, provider.embed_model, t, i, c))
-    todo = [(k, v) for k, v in want.items() if have.get(k) != v[0]]
-    for b in range(0, len(todo), BATCH):
-        part = todo[b:b + BATCH]
-        vecs = provider.embed([v[3] for _, v in part])
+    tiers = chunk_tiers(conn, org_id)
+    order = {t: i for i, t in enumerate(TIERS)}
+    todo = sorted(((k, v) for k, v in want.items() if have.get(k) != v[0]),
+                  key=lambda kv: (order[tiers[kv[0]]], kv[0]))
+    stopped, sent = None, 0
+    until = exhausted_until(conn, provider.embed_model)
+    if until is not None:
+        todo_run, stopped = [], f"quota exhausted until {until.isoformat(timespec='seconds')}"
+    else:
+        todo_run = todo
+    for b in range(0, len(todo_run), BATCH):
+        part = todo_run[b:b + BATCH]
+        if budget is not None:
+            room = budget - sent
+            if room <= 0:
+                stopped = f"daily budget of {budget} items reached"
+                break
+            part = part[:room]
+        try:
+            vecs = provider.embed([v[3] for _, v in part])
+        except QuotaExhausted as exc:
+            conn.execute("INSERT INTO quota_state (model, exhausted_until, note) VALUES (%s, now() + make_interval(secs => %s), %s) "
+                         "ON CONFLICT (model) DO UPDATE SET exhausted_until=EXCLUDED.exhausted_until, note=EXCLUDED.note, "
+                         "updated_at=now()", (provider.embed_model, exc.retry_after_s, str(exc)[:200]))
+            conn.commit()
+            stopped = f"hard quota hit: {exc}"
+            break
         for ((t, i, c), (h, s, e, _x)), vec in zip(part, vecs):
             conn.execute(
                 "INSERT INTO embeddings (organization_id, owner_table, owner_id, chunk_index, chunk_start, chunk_end,"
@@ -73,5 +146,39 @@ def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider) -> dict
                 "ON CONFLICT (owner_table, owner_id, model, chunk_index) DO UPDATE SET content_hash=EXCLUDED.content_hash,"
                 " chunk_start=EXCLUDED.chunk_start, chunk_end=EXCLUDED.chunk_end, embedding=EXCLUDED.embedding",
                 (org_id, t, i, c, s, e, h, provider.embed_model, _vec(vec)))
+        sent += len(part)
+        record_usage(conn, provider.embed_model, "index", len(part))  # only items the API accepted
         conn.commit()  # progress survives an interrupted run; unchanged chunks are skipped on the next one
-    return {"candidates": len(want), "embedded": len(todo), "cached": len(want) - len(todo), "removed": len(stale)}
+        if budget is not None and sent >= budget and sent < len(todo_run):
+            stopped = f"daily budget of {budget} items reached"
+            break
+    return {"candidates": len(want), "embedded": sent, "pending": len(todo) - sent, "cached": len(want) - len(todo),
+            "removed": len(stale), "stopped": stopped, "coverage": tier_coverage(conn, org_id, provider.embed_model)}
+
+
+def main() -> int:
+    """One pass, no retries: `python -m app.retrieval.embed [--budget N]` (org from ORG_SLUG, model from env)."""
+    import argparse
+    import json
+
+    from ..db import connect
+    from ..models.provider import make_provider
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--budget", type=int, default=None, help="max items this pass (default: daily budget remaining)")
+    a = ap.parse_args()
+    s = get_settings()
+    prov = make_provider(s)
+    with connect() as conn:
+        org = conn.execute("SELECT id FROM organizations WHERE slug=%s", (s.org_slug,)).fetchone()["id"]
+        budget = a.budget if a.budget is not None else max(0, s.embed_daily_budget - used_today(conn, prov.embed_model))
+        res = embed_org(conn, org, prov, budget=budget)
+        res["budget_this_pass"] = budget
+        res["coverage_text"] = coverage_text(res["coverage"])
+        res["used_today_index"] = used_today(conn, prov.embed_model)
+    print(json.dumps(res, default=str))
+    return 3 if (res["stopped"] or "").startswith(("hard quota", "quota exhausted")) else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
