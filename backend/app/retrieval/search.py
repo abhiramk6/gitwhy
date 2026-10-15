@@ -16,7 +16,7 @@ import psycopg
 from ..config import get_settings
 from ..intelligence import tasks
 from ..intelligence.judge import run_task
-from ..models.provider import LLMUnavailable, Provider
+from ..models.provider import LLMUnavailable, Provider, QuotaExhausted
 from .embed import _vec
 
 RRF_K = 60
@@ -148,7 +148,10 @@ def search_with_meta(conn: psycopg.Connection, org_id: int, provider: Provider, 
     kw_lists = [_keyword_ranked(conn, org_id, q, per_signal) for q in queries]
     vec, spans = [], {}
     if meta["semantic"]:
-        vec, spans = _vector(conn, org_id, provider, (analysis or {}).get("answer_sketch") or query, per_signal)
+        try:
+            vec, spans = _vector(conn, org_id, provider, (analysis or {}).get("answer_sketch") or query, per_signal)
+        except QuotaExhausted as exc:  # degrade to lexical + model judgment instead of failing the request
+            meta.update(semantic=False, vector_error=f"embedding quota exhausted: {exc}")
     scores: dict[tuple[str, int], float] = {}
     sig: dict[tuple[str, int], dict[str, int]] = {}
     lists = [("identifier", exact)] + [(f"keyword{'' if n == 0 else n + 1}", lst) for n, lst in enumerate(kw_lists)] \

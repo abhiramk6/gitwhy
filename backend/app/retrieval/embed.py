@@ -6,6 +6,7 @@ in the PR/issue that explains them. With a provider that has no semantic embeddi
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 
 import psycopg
 
@@ -176,6 +177,17 @@ def main() -> int:
         res["budget_this_pass"] = budget
         res["coverage_text"] = coverage_text(res["coverage"])
         res["used_today_index"] = used_today(conn, prov.embed_model)
+        if (res["stopped"] or "").startswith("hard quota") and res["used_today_index"] < budget:
+            # The API cap was hit before our own ledger predicted it: record it for the owner, stop for the day.
+            note = (f"cap hit EARLY: API refused after {res['used_today_index']} accepted index items today "
+                    f"(ledger budget {budget}); embedding stopped for the day")
+            conn.execute("UPDATE quota_state SET note=%s WHERE model=%s", (note, prov.embed_model))
+            conn.commit()
+            from datetime import datetime, timezone
+            root = Path(__file__).resolve().parents[3]
+            with (root / "DECISIONS.md").open("a") as fh:
+                fh.write(f"- {datetime.now(timezone.utc):%Y-%m-%d %H:%M} — EMBEDDING CAP EARLY: {note}.\n")
+            res["early_cap"] = note
     print(json.dumps(res, default=str))
     return 3 if (res["stopped"] or "").startswith(("hard quota", "quota exhausted")) else 0
 

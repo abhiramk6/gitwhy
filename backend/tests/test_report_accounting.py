@@ -120,3 +120,20 @@ def test_hard_quota_is_recorded_and_not_retried(conn):
     prov2 = Recording()
     res2 = embed_org(conn, org, prov2)                   # while exhausted the API is not even called
     assert prov2.n == 0 and "quota exhausted until" in res2["stopped"]
+
+
+def test_search_degrades_to_lexical_when_query_embedding_quota_is_exhausted(conn):
+    from app.models.provider import QuotaExhausted
+    from app.retrieval.embed import embed_org
+    from app.retrieval.search import search_with_meta
+
+    org = _seed_tiers(conn)
+    prov = Recording()
+    embed_org(conn, org, prov)
+    prov.responders = {
+        "query_analysis": lambda p: {"intent": "x", "search_queries": [], "identifiers": [], "answer_sketch": "adr body"},
+        "rerank": lambda p: {"ranked": [{"id": c["id"], "relevance": 2, "reason": "r"} for c in p["candidates"]]}}
+    prov.fail_after, prov.n = 0, 0          # now every embed() call raises QuotaExhausted
+    hits, meta = search_with_meta(conn, org, prov, "adr body")
+    assert meta["semantic"] is False and "quota" in meta["vector_error"]
+    assert [h.source_id for h in hits]       # lexical results still returned
