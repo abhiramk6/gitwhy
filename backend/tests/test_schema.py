@@ -2,9 +2,11 @@ import psycopg
 import pytest
 
 from app import db
+from tests.conftest import reset_db
 
 
 def test_migrations_idempotent(test_url):
+    reset_db(test_url)
     first = db.migrate(test_url)
     assert "001_init.sql" in first
     assert db.migrate(test_url) == []  # re-run applies nothing
