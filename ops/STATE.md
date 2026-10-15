@@ -22,3 +22,7 @@ Updated: 2026-10-15
 - Replies arrive via ops/poll_telegram.sh under Monitor (30 min max per arm; re-arm on expiry).
 - Only messages from the paired chat id are acted on.
 - Checklist sent to Telegram; waiting on: new bot token, GitHub, GCP trial, gcloud login.
+- Group "Cb" paired 2026-10-15 on explicit owner confirmation typed in terminal. Updates go to the group
+  (ops/notify.sh); NOTIFY_DM=1 forces DM. Instructions/approvals accepted ONLY from the owner's user id.
+- Approvals for billable/outward actions must still be typed in the terminal session (Telegram events are
+  delivered as background events, not user input).

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Send a Telegram message to the owner.  Usage: ops/notify.sh "text"
-# Reads TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID from ~/.config/lore/telegram.env (mode 600).
+# Reads TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (owner DM) and optional TELEGRAM_GROUP_CHAT_ID
+# from ~/.config/lore/telegram.env (mode 600). Sends to the paired group when set;
+# NOTIFY_DM=1 forces the owner DM.
 set -euo pipefail
 ENV_FILE="${LORE_TELEGRAM_ENV:-$HOME/.config/lore/telegram.env}"
 [ -f "$ENV_FILE" ] || { echo "notify: $ENV_FILE missing" >&2; exit 2; }
@@ -8,5 +10,5 @@ ENV_FILE="${LORE_TELEGRAM_ENV:-$HOME/.config/lore/telegram.env}"
 source "$ENV_FILE"
 : "${TELEGRAM_BOT_TOKEN:?}" "${TELEGRAM_CHAT_ID:?}"
 curl -sS --max-time 15 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-  --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+  --data-urlencode "chat_id=$([ "${NOTIFY_DM:-0}" = 1 ] && echo "${TELEGRAM_CHAT_ID}" || echo "${TELEGRAM_GROUP_CHAT_ID:-$TELEGRAM_CHAT_ID}")" \
   --data-urlencode "text=${1:?message required}" >/dev/null
