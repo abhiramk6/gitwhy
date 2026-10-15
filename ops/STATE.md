@@ -16,3 +16,9 @@ Updated: 2026-10-15
 ## Next (once unblocked)
 1. Install toolchain: node, gcloud, gh, postgres+pgvector (local), docker if needed
 2. Stage 0 foundation
+
+## Channel
+- Telegram is the primary channel (bot @<project bot>, owner chat paired 2026-10-15).
+- Replies arrive via ops/poll_telegram.sh under Monitor (30 min max per arm; re-arm on expiry).
+- Only messages from the paired chat id are acted on.
+- Checklist sent to Telegram; waiting on: new bot token, GitHub, GCP trial, gcloud login.
