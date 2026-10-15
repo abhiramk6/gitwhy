@@ -19,9 +19,11 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gcp_project: str = ""
     gcp_location: str = "us-central1"
-    # Model names must be confirmed against the provider console before a live run.
-    gen_model: str = "gemini-2.5-flash"
-    embed_model: str = "text-embedding-005"
+    # Confirmed against the live Gemini API (models.list) on 2026-10-15; 2.5 models are retired for new users; newest generation only.
+    # Vertex uses its own embedding names (e.g. text-embedding-005): set EMBED_MODEL when PROVIDER=vertex.
+    gen_model: str = "gemini-3.8-flash"
+    gen_fallback_models: str = "gemini-3.7-flash,gemini-3.5-flash-lite"  # comma separated; tried when the primary is overloaded
+    embed_model: str = "gemini-embedding-2"
 
     # Candidate-pool and prompt budgets (cost/latency controls, not relevance rules; relevance is the model's job).
     rerank_pool: int = 30

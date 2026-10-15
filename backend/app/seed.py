@@ -25,7 +25,7 @@ def run(path: Path = DEFAULT) -> dict:
         g = build(conn, org, provider)
         e = embed_org(conn, org, provider)
     return {"migrations_applied": applied, "ingest": st.__dict__, "graph": g.__dict__, "embeddings": e,
-            "provider": provider.name}
+            "provider": provider.name, "model_usage": getattr(provider, "usage", None)}
 
 
 if __name__ == "__main__":

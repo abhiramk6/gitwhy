@@ -57,12 +57,19 @@ class OfflineProvider:
 
 
 class GeminiProvider:
-    """Gemini via the Developer API (api key) or Vertex AI (ADC). Not exercised until credentials exist."""
+    """Gemini via the Developer API (api key) or Vertex AI (ADC).
+
+    Generation tries `gen_model`, then each of `fallback_models`, retrying transient failures (503/429/500) with
+    backoff; a model that no longer exists (404) is skipped. `last_model` is whichever model actually answered, and
+    `models` is the full chain so cached judgments from any of them are reusable."""
     has_llm = True
     semantic_embeddings = True
+    RETRIES = 2
+    BACKOFF_S = 1.5
 
     def __init__(self, *, api_key: str = "", project: str = "", location: str = "us-central1",
-                 gen_model: str = "gemini-2.5-flash", embed_model: str = "text-embedding-005"):
+                 gen_model: str = "gemini-3.5-flash", embed_model: str = "gemini-embedding-001",
+                 fallback_models: tuple[str, ...] = ()):
         from google import genai  # lazy: only needed when a model is configured
 
         if api_key:
@@ -70,37 +77,88 @@ class GeminiProvider:
         else:
             self._client, self.name = genai.Client(vertexai=True, project=project, location=location), "vertex-gemini"
         self._gen_model, self.embed_model = gen_model, embed_model
+        self.models = [gen_model, *[m for m in fallback_models if m and m != gen_model]]
+        self.last_model = gen_model
+        self.usage = {"calls": 0, "prompt_tokens": 0, "output_tokens": 0, "retries": 0, "fallbacks": 0}
+
+    def _call(self, fn):
+        import time
+
+        from google.genai import errors
+
+        for attempt in range(self.RETRIES):
+            try:
+                return fn()
+            except errors.ServerError:
+                pass
+            except errors.ClientError as exc:
+                if getattr(exc, "code", None) != 429:
+                    raise
+            self.usage["retries"] += 1
+            time.sleep(self.BACKOFF_S * (attempt + 1))
+        return fn()
 
     def embed(self, texts: list[str], query: bool = False) -> list[list[float]]:
         from google.genai import types
 
-        task = "RETRIEVAL_QUERY" if query else "RETRIEVAL_DOCUMENT"
+        from concurrent.futures import ThreadPoolExecutor
+
+        cfg = types.EmbedContentConfig(output_dimensionality=EMBED_DIM,
+                                       task_type="RETRIEVAL_QUERY" if query else "RETRIEVAL_DOCUMENT")
+
+        def one(batch: list[str]):
+            return self._call(lambda: self._client.models.embed_content(
+                model=self.embed_model, contents=batch, config=cfg)).embeddings
+
         out: list[list[float]] = []
         for i in range(0, len(texts), 50):
-            r = self._client.models.embed_content(
-                model=self.embed_model, contents=texts[i:i + 50],
-                config=types.EmbedContentConfig(output_dimensionality=EMBED_DIM, task_type=task))
-            out.extend(e.values for e in r.embeddings)
+            batch = texts[i:i + 50]
+            got = one(batch)
+            if len(got) != len(batch):
+                # Some embedding models (gemini-embedding-2) fold a batch into ONE vector; embed each text alone so
+                # vectors stay aligned with their chunks instead of silently shifting.
+                with ThreadPoolExecutor(8) as ex:
+                    got = [e[0] for e in ex.map(lambda t: one([t]), batch)]
+            out.extend(_unit(e.values) for e in got)
         return out
 
     def generate_json(self, system: str, user: str, schema: dict) -> dict:
-        from google.genai import types
+        from google.genai import errors, types
 
         cfg = types.GenerateContentConfig(system_instruction=system, response_mime_type="application/json",
                                           response_schema=schema, temperature=0.0)
         last: Exception | None = None
-        for _ in range(2):  # one retry: structured output occasionally fails to parse
-            try:
-                r = self._client.models.generate_content(model=self._gen_model, contents=user, config=cfg)
-                return json.loads(r.text)
-            except (json.JSONDecodeError, ValueError) as exc:
-                last = exc
-        raise RuntimeError(f"model did not return valid JSON: {last}")
+        for n, model in enumerate(self.models):
+            for _ in range(2):  # one retry: structured output occasionally fails to parse
+                try:
+                    r = self._call(lambda: self._client.models.generate_content(model=model, contents=user, config=cfg))
+                    out = json.loads(r.text)
+                except (json.JSONDecodeError, ValueError, TypeError) as exc:
+                    last = exc
+                    continue
+                except (errors.ServerError, errors.ClientError) as exc:
+                    last = exc
+                    break  # unavailable / retired: next model in the chain
+                u = getattr(r, "usage_metadata", None)
+                self.usage["calls"] += 1
+                self.usage["prompt_tokens"] += getattr(u, "prompt_token_count", 0) or 0
+                self.usage["output_tokens"] += getattr(u, "candidates_token_count", 0) or 0
+                self.usage["fallbacks"] += 1 if n else 0
+                self.last_model = model
+                return out
+        raise RuntimeError(f"no model produced a valid answer: {type(last).__name__}: {str(last)[:200]}")
+
+
+def _unit(v) -> list[float]:
+    """Reduced-dimension Gemini embeddings are not unit length; normalise so cosine distance is well behaved."""
+    n = math.sqrt(sum(x * x for x in v)) or 1.0
+    return [x / n for x in v]
 
 
 def make_provider(settings) -> Provider:
     if settings.provider in ("gemini", "vertex"):
         return GeminiProvider(api_key=settings.gemini_api_key if settings.provider == "gemini" else "",
                               project=settings.gcp_project, location=settings.gcp_location,
-                              gen_model=settings.gen_model, embed_model=settings.embed_model)
+                              gen_model=settings.gen_model, embed_model=settings.embed_model,
+                              fallback_models=tuple(m for m in settings.gen_fallback_models.split(',') if m.strip()))
     return OfflineProvider()

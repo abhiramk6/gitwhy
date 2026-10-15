@@ -21,16 +21,17 @@ def run_task(conn: psycopg.Connection, org: int, provider: Provider, task: str, 
              schema: dict) -> dict:
     user = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
     key = input_hash(task, system, user)
-    model = getattr(provider, "_gen_model", None) or provider.name
-    # With a live model only its own cached answers count; with none, replay the newest answer from any model.
+    models = list(getattr(provider, "models", None) or [provider.name])
+    # With a live model only answers from its own model chain count; with none, replay the newest from any model.
     row = conn.execute("SELECT output FROM llm_judgments WHERE organization_id=%s AND task=%s AND input_hash=%s "
-                       "AND (model=%s OR NOT %s) ORDER BY id DESC LIMIT 1",
-                       (org, task, key, model, provider.has_llm)).fetchone()
+                       "AND (model = ANY(%s) OR NOT %s) ORDER BY id DESC LIMIT 1",
+                       (org, task, key, models, provider.has_llm)).fetchone()
     if row:
         return row["output"]
     if not provider.has_llm:
         raise LLMUnavailable(f"task '{task}' needs an LLM and no cached judgment exists")
     out = provider.generate_json(f"[task:{task}]\n{system}", user, schema)
+    model = getattr(provider, "last_model", None) or provider.name
     conn.execute("INSERT INTO llm_judgments (organization_id, task, input_hash, model, output) VALUES (%s,%s,%s,%s,%s::jsonb) "
                  "ON CONFLICT (organization_id, task, input_hash, model) DO NOTHING",
                  (org, task, key, model, json.dumps(out)))
