@@ -1,0 +1,146 @@
+{
+  "_provenance": "FROZEN held-out set for org oss-pallets. Written from the overlay ADR texts (acme-handbook ADR-101..108), the runbook titles and the repository file listing ONLY. No live-model OSS plan output had been generated or viewed when this file was written (OSS embeddings were still being built). Never used for prompt or code tuning; changes after the commit that introduces it invalidate the held-out claim and must be reported as such.",
+  "_scoring": {
+    "buckets": "Decisions: required (must appear -> else FAIL), excluded (must not appear -> FAIL), unlisted (everything else: reported for review, never auto-failed; NOT adjudicated on held-out). Risks: required_risks (must appear), allowed_subjects (relevant, reported), anything else is unlisted/review. Reuse: allowed_reuse_components, anything else is unlisted/review.",
+    "reporting": "counts per set (dev / held-out), no percentages",
+    "subject_id_form": "<repo>:<path>, e.g. flask:src/flask/cli.py; '*' matches within a path segment sequence (fnmatch)"
+  },
+  "cases": [
+    {
+      "id": "H1",
+      "kind": "supported",
+      "request": "Make our Flask app answer a 404 with a standard problem+json error body instead of the default HTML page",
+      "expect_primary": "flask",
+      "expect_components": ["flask", "werkzeug"],
+      "required_decisions": ["ADR-107"],
+      "excluded_decisions": ["ADR-105", "ADR-106", "ADR-108", "ADR-103", "ADR-104", "ADR-102"],
+      "required_risks": [],
+      "allowed_subjects": [
+        {"glob": "flask:src/flask/*.py", "why": "Flask core package: error handlers are registered on the app"},
+        {"glob": "flask:docs/*error*", "why": "Flask error-handling documentation"},
+        {"glob": "werkzeug:src/werkzeug/exceptions.py", "why": "HTTP exception classes rendered by the handler"},
+        {"glob": "werkzeug:docs/exceptions.rst", "why": "Werkzeug exception documentation"},
+        {"glob": "acme-handbook:docs/adr/ADR-107-*", "why": "The governing decision"}
+      ],
+      "allowed_reuse_components": [
+        {"name": "werkzeug", "why": "HTTPException hierarchy should be reused rather than hand-rolled responses"},
+        {"name": "flask", "why": "app.errorhandler is the existing extension point"}
+      ],
+      "note": "ADR-108 shares the 'error-format' topic but is CLI-only (trap)."
+    },
+    {
+      "id": "H2",
+      "kind": "supported",
+      "request": "Give the HTTP calls our Click-based CLI makes through requests an explicit timeout and a bounded retry policy",
+      "expect_primary": "requests",
+      "expect_components": ["requests", "urllib3"],
+      "required_decisions": ["ADR-103"],
+      "excluded_decisions": ["ADR-105", "ADR-106", "ADR-102", "ADR-107"],
+      "required_risks": [],
+      "allowed_subjects": [
+        {"glob": "requests:src/requests/adapters.py", "why": "HTTPAdapter is where a urllib3 Retry is mounted"},
+        {"glob": "requests:src/requests/sessions.py", "why": "Session-level adapter and timeout handling"},
+        {"glob": "urllib3:src/urllib3/util/retry.py", "why": "Retry object with backoff"},
+        {"glob": "urllib3:src/urllib3/util/timeout.py", "why": "Timeout object (connect/read)"},
+        {"glob": "acme-handbook:runbooks/http-client-reliability.md", "why": "Team runbook for exactly this"},
+        {"glob": "acme-handbook:docs/adr/ADR-103-*", "why": "The governing decision"},
+        {"glob": "click:src/click/exceptions.py", "why": "How the CLI surfaces a failed call (ClickException)"}
+      ],
+      "allowed_reuse_components": [
+        {"name": "urllib3", "why": "Retry is the mandated mechanism"},
+        {"name": "requests", "why": "HTTPAdapter is where it is mounted"},
+        {"name": "click", "why": "ClickException for user-facing failures"}
+      ],
+      "note": "Cross-cutting: ADR-104/ADR-108/ADR-101 are unlisted (reviewed on dev only, not here)."
+    },
+    {
+      "id": "H3",
+      "kind": "supported",
+      "request": "Upgrade Jinja2 to the next minor release",
+      "expect_primary": "jinja",
+      "expect_components": ["jinja", "flask"],
+      "required_decisions": ["ADR-101"],
+      "excluded_decisions": ["ADR-105", "ADR-106", "ADR-103", "ADR-104", "ADR-107", "ADR-108"],
+      "required_risks": [],
+      "allowed_subjects": [
+        {"glob": "jinja:src/jinja2/*", "why": "The package being upgraded"},
+        {"glob": "jinja:changelog/*", "why": "Release notes for the version change"},
+        {"glob": "jinja:docs/changes.rst", "why": "Changelog"},
+        {"glob": "flask:src/flask/templating.py", "why": "Flask's integration point with Jinja"},
+        {"glob": "markupsafe:src/markupsafe/*", "why": "Jinja's escaping dependency; upgraded in lockstep"},
+        {"glob": "acme-handbook:runbooks/upgrading-markupsafe-and-jinja.md", "why": "Team procedure for this upgrade"},
+        {"glob": "acme-handbook:docs/adr/ADR-101-*", "why": "The governing decision"}
+      ],
+      "allowed_reuse_components": [
+        {"name": "runbooks/upgrading-markupsafe-and-jinja", "why": "Existing upgrade procedure to follow"}
+      ],
+      "note": "ADR-102 (escaping) is unlisted: applies only if autoescape behaviour changes, which is not requested."
+    },
+    {
+      "id": "H4",
+      "kind": "supported",
+      "request": "Make `flask run` print a one-line plain error and exit non-zero when the application module fails to import",
+      "expect_primary": "flask",
+      "expect_components": ["flask", "click"],
+      "required_decisions": ["ADR-104"],
+      "excluded_decisions": ["ADR-105", "ADR-107", "ADR-106", "ADR-103", "ADR-102"],
+      "required_risks": [],
+      "allowed_subjects": [
+        {"glob": "flask:src/flask/cli.py", "why": "flask run and app loading live here"},
+        {"glob": "click:src/click/*.py", "why": "Click exceptions and exit handling"},
+        {"glob": "acme-handbook:docs/adr/ADR-104-*", "why": "CLI conventions decision"},
+        {"glob": "acme-handbook:docs/adr/ADR-108-*", "why": "CLI error-output decision"}
+      ],
+      "allowed_reuse_components": [
+        {"name": "click", "why": "ClickException/exit codes are the mandated mechanism"},
+        {"name": "flask", "why": "FlaskGroup / ScriptInfo own app loading"}
+      ],
+      "note": "ADR-107 is HTTP error format (trap: same 'error-format' topic, wrong surface). ADR-108 and ADR-101 are unlisted."
+    },
+    {
+      "id": "H5",
+      "kind": "supported_no_decision_applies",
+      "request": "Add a helper to werkzeug that picks the best matching language from an Accept-Language header using q-values",
+      "expect_primary": "werkzeug",
+      "expect_components": ["werkzeug"],
+      "required_decisions": [],
+      "excluded_decisions": ["ADR-101", "ADR-102", "ADR-103", "ADR-104", "ADR-105", "ADR-106", "ADR-107", "ADR-108"],
+      "required_risks": [],
+      "allowed_subjects": [
+        {"glob": "werkzeug:src/werkzeug/datastructures/accept.py", "why": "Accept/LanguageAccept classes and best_match"},
+        {"glob": "werkzeug:src/werkzeug/http.py", "why": "Accept header parsing"},
+        {"glob": "werkzeug:docs/datastructures.rst", "why": "Documentation of the accept structures"},
+        {"glob": "werkzeug:docs/http.rst", "why": "HTTP helper documentation"}
+      ],
+      "allowed_reuse_components": [
+        {"name": "werkzeug", "why": "LanguageAccept.best_match may already provide this"}
+      ],
+      "note": "A well-supported component where NO team decision applies: every decision listed is a FAIL (padding check). ADR-107 has werkzeug in scope but governs HTTP error rendering only."
+    },
+    {
+      "id": "H6",
+      "kind": "partially_supported_ambiguous",
+      "request": "Make Flask sessions work across several regions using a shared Redis session store",
+      "expect_primary": "flask",
+      "expect_components": ["flask"],
+      "expect_status_any": ["draft", "insufficient_evidence"],
+      "if_draft": "must carry at least one open question that names the unsupported part (server-side/Redis session storage) and must not cite evidence as if a Redis session store already exists",
+      "required_decisions": [],
+      "excluded_decisions": ["ADR-105", "ADR-103", "ADR-102", "ADR-107", "ADR-108", "ADR-104"],
+      "required_risks": [],
+      "allowed_subjects": [
+        {"glob": "flask:src/flask/sessions.py", "why": "Flask's cookie session implementation (the supported part)"},
+        {"glob": "flask:src/flask/config.py", "why": "SECRET_KEY / fallback configuration"},
+        {"glob": "itsdangerous:src/itsdangerous/*", "why": "Signing library behind cookie sessions"},
+        {"glob": "acme-handbook:docs/adr/ADR-106-*", "why": "Key rotation decision: relevant to keys shared across regions"},
+        {"glob": "acme-handbook:runbooks/rotating-session-keys.md", "why": "Rotation procedure"},
+        {"glob": "acme-handbook:runbooks/postmortem-PM-2025-11-session-logout.md", "why": "Prior incident about mass session logout"}
+      ],
+      "allowed_reuse_components": [
+        {"name": "flask", "why": "SessionInterface is the extension point for a different session backend"},
+        {"name": "itsdangerous", "why": "Existing signing mechanism"}
+      ],
+      "note": "Nothing in the corpus documents a Redis/server-side session store: the supported part (cookie sessions, key rotation) should be planned and the unsupported part surfaced as an open question, not invented. ADR-106 is unlisted (reviewable)."
+    }
+  ]
+}
