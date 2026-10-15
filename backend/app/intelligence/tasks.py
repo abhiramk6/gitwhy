@@ -57,7 +57,15 @@ PLAN = {
         "following the old one; (3) judge relevance — omit candidates that do not matter for this request instead "
         "of listing everything; (4) tasks, tests and questions are proposals: make them specific to this request "
         "and the cited evidence, order them with depends_on, and do not restate generic boilerplate; (5) if "
-        "something needed is unknown, put it in open_questions; (6) never invent ids, services or decisions."),
+        "something needed is unknown, put it in open_questions; (6) never invent ids, services or decisions; "
+        "(7) for EVERY active decision, ask whether the request touches the thing it governs (data formats and "
+        "representations, error handling, outbound calls, messaging, idempotency, security) and include it when it "
+        "does, even if its title does not repeat the request's words; (8) review every entry in "
+        "code_citing_superseded_decisions: when that code sits in a service the request changes or depends on, "
+        "report it as a risk of type 'stale_reference' saying which superseded decision it still follows and which "
+        "decision replaced it; (9) review every reuse_candidates entry: when the request would add or extend "
+        "functionality that an existing component already provides, or that two components duplicate, report it "
+        "under reuse and name the component to use. 'reuse' means existing code to reuse, never planned work."),
     "schema": {"type": "object", "properties": {
         "components": {"type": "array", "items": {"type": "object", "properties": {
             "service": {"type": "string"}, "needs_change": {"type": "string"}, "reason": {"type": "string"},
