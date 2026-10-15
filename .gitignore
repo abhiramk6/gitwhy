@@ -7,4 +7,5 @@ node_modules/
 *.key
 frontend/dist/
 frontend/node_modules/
+reviews/
 ops/logs/

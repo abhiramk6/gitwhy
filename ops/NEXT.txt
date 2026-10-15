@@ -1,1 +1,1 @@
-PR-review drafts (local only) while embeddings wait; wire dev scoring; dev-only partial B after the docs tier completes.
+Wire dev scoring (agent-confirmed lists, labelled); run PR-review drafts on more dev PRs; dev-only partial B after the docs tier completes (about Oct 17 00:05 UTC).

@@ -8,6 +8,9 @@ _none blocking._ One-time asks at the next milestone (dev-only partial B): revie
 `excluded_subjects`, which are **agent-confirmed, not human-reviewed**.
 
 ## Log (UTC, server clock)
+- 2026-10-15 19:45 — PR review drafting added (backend/app/review): local files only (reviews/, gitignored), no network code, no post path (test-enforced); same evidence guard as the planner plus quote check for violations, superseded decisions never reported as violations, dependency-impact must cite a consumer edge. Developed and checked on Northwind dev PRs only; never against held-out cases.
+- 2026-10-15 19:40 — Hourly status runs as its own tmux process (lore:hourly), independent of the agent session; does not survive a host reboot.
+- 2026-10-15 19:38 — Search degrades to lexical when the query-embedding quota is exhausted, instead of failing.
 - 2026-10-15 19:36 — Plan A accepted by owner: embed order ADR, facts, issues, PRs, docs, code; 900 index items/day, 100/day query reserve; one pass per quota day, no retry loops. Reason: free-tier cap is 1,000 items/day/model (counted per text).
 - 2026-10-15 19:36 — Ledger counts only items the API accepted; failed requests are not confirmable as free, so a 100/day reserve is kept. If a pass hits the cap earlier than the ledger predicts: stop for the day, log here, report in the next update.
 - 2026-10-15 19:36 — Schedule dates are stated with the server clock (Thu 2026-10-15 19:34 UTC) and as hours from now; the API's RetryInfo (16,527 s) places the next reset at about 00:05 UTC on 2026-10-16.

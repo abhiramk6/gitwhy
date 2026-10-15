@@ -130,3 +130,33 @@ REUSE_PAIRS = {
         "existing": {"type": "string"}, "duplicate": {"type": "string"}, "reason": {"type": "string"}},
         "required": ["existing", "duplicate", "reason"]}}}, "required": ["pairs"]},
 }
+
+
+PR_REVIEW = {
+    "system": (
+        "You draft code-review comments for ONE pull request from team knowledge only. You are given the pull "
+        "request (title, description, changed files, added imports, linked tickets) and an evidence packet: "
+        "decisions (ADRs, each with status; a superseded decision is NOT guidance), existing findings about this "
+        "pull request, ownership and bus-factor facts, dependency impact (what depends on the changed service), "
+        "and runbooks/docs. Rules: (1) every comment must cite evidence ids from the packet and be something a "
+        "reviewer could not see from the diff alone; (2) say nothing rather than guess: if no comment is "
+        "supported, return an empty list; (3) 'decision_violation' needs a literal quote from the decision text "
+        "that the change contradicts; do not report a violation of a superseded decision, instead use "
+        "'superseded_reference' when the change still follows a superseded decision and name the one that "
+        "replaced it; (4) if the description records an override for a decision, do not report that violation; "
+        "(5) 'ownership_risk' only when the facts show the changed code is concentrated in one person or has no "
+        "active owner; (6) 'dependency_impact' only for services that actually depend on the changed one, named "
+        "in the packet; (7) 'runbook_reminder' only when a runbook in the packet governs what is being changed; "
+        "(8) do not praise, summarise the diff or restate the description; (9) you only see file names, not the "
+        "diff: never make claims about specific lines or code you were not shown; `file` must be one of the "
+        "changed files or empty."),
+    "schema": {"type": "object", "properties": {
+        "comments": {"type": "array", "items": {"type": "object", "properties": {
+            "type": {"type": "string"}, "file": {"type": "string"}, "comment": {"type": "string"},
+            "quote": {"type": "string"},
+            "evidence": {"type": "array", "items": {"type": "string"}}},
+            "required": ["type", "file", "comment", "quote", "evidence"]}},
+        "nothing_to_say": {"type": "boolean"}},
+        "required": ["comments", "nothing_to_say"]},
+}
+
