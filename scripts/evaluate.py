@@ -64,7 +64,11 @@ def main() -> int:
                 tally.add("PASS" if ok else "FAIL")
                 lines.append(f"| {c['q']} | {' / '.join(c['expect_any'])} in top {c.get('k', 5)} | {meta['mode']} | "
                              f"{cm.text()} | {'PASS' if ok else 'FAIL'} | {rank or '–'} |")
-        lines += ["", f"- hit rate@k: **{hits_at_k}/{pos}**; MRR: **{sum(rr) / max(len(rr), 1):.2f}**", ""]
+        ranks = [round(1 / x) if x else None for x in rr]
+        dist = {"rank 1": sum(r == 1 for r in ranks), "rank 2-3": sum(r in (2, 3) for r in ranks),
+                "rank 4+": sum(r is not None and r >= 4 for r in ranks), "not found": sum(r is None for r in ranks)}
+        lines += ["", f"- found within k: **{hits_at_k} of {pos}** questions; " +
+                  ", ".join(f"{k}: {v}" for k, v in dist.items()), ""]
 
         lines += ["## Planning", "", "| Case | Check | Result |", "|---|---|---|"]
         total_claims = unsupported = 0
@@ -102,8 +106,7 @@ def main() -> int:
                 lines.append(f"| {c['name']} | {name} | {'PASS' if ok else 'FAIL'} |")
             lines.append(f"| {c['name']} | _model calls: {cm.text()} · search mode: {plan.get('search_mode')} · "
                          f"guard drops: {len(plan.get('dropped_claims', []))}_ | – |")
-        rate = unsupported / total_claims if total_claims else 0.0
-        lines += ["", f"- unsupported-claim rate: **{rate:.1%}** ({unsupported}/{total_claims} claims)", ""]
+        lines += ["", f"- claims without valid supporting evidence: **{unsupported} of {total_claims}** claims checked", ""]
         prov_lines = header(prov, conn, org)
 
     out = ["# Evaluation report", "", f"Organization: synthetic Northwind Labs · Result: {tally.line()}", "",
