@@ -5,4 +5,6 @@ node_modules/
 .venv/
 *.pem
 *.key
+frontend/dist/
+frontend/node_modules/
 ops/logs/

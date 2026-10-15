@@ -19,8 +19,12 @@ Updated: 2026-10-15
 - Stage 4 (commit d079151): provider adapter (offline deterministic + Vertex), embeddings w/ admission,
   hybrid retrieval (FTS+pgvector+graph, RRF), evidence-bound planner. 31 tests pass total (2026-10-15 09:25 UTC).
 
+- Stage 5 (commit a7277b0 + UI): REST API, token-gated writes, /remember /override, curation, MCP route (7 tools),
+  React UI (4 screens) served by backend. 43 backend tests + 14-step headless-browser e2e pass (no console errors,
+  no overflow at 390px). Dev DB cleaned of e2e artifacts.
+
 ## Next
-- Stage 5: API routes for dashboard + MCP route; 4-screen React UI (Vite).
+- Prepare offline: Dockerfile, Cloud Build/Run configs, eval script, cost watcher (Stage 6/7 prep).
 - Stage 6: GCP deploy (blocked on owner: GCP trial + gcloud login + approval for billable resources).
 - Stage 7: hardening, demo script, fallback mode.
 

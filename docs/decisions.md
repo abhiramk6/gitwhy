@@ -37,7 +37,8 @@ Bounded recursive-CTE traversal. No separate graph DB until measured need.
 Local dev: Postgres 16 + pgvector 0.6.0. Cloud: Cloud SQL (version/extension support to be confirmed in Stage 6).
 Migrations avoid superuser-only operations other than `CREATE EXTENSION IF NOT EXISTS`.
 
-## D5 — Runtime: Cloud Run service + job; no GKE  (2026-10-15, accepted)
+## D5 — Runtime: one Cloud Run service (API + MCP + built SPA) + one Cloud Run Job; no GKE  (2026-10-15, amended)
+Amended: the FastAPI service serves the built React app, so there is no separate frontend service (less cost, one deploy).
 
 ## D6 — Demo data: synthetic org fixtures are primary; live connectors secondary  (2026-10-15, accepted)
 

@@ -1,13 +1,28 @@
 #!/usr/bin/env bash
-# Runs independently of any agent session (in tmux window lore:bridge).
+# Runs independently of any agent session (in tmux window lore:bridge); targets the live agent pane lore:shell.0.
 # Long-polls Telegram; for each message sent by the OWNER's user id (DM or paired group) it types
 # the text into the agent pane (lore:agent) as a normal user prompt. Everyone else is ignored.
 set -uo pipefail
 source "$HOME/.config/lore/telegram.env"
-PANE="${LORE_AGENT_PANE:-lore:agent}"
+PANE="${LORE_AGENT_PANE:-lore:shell.0}"
 OFF_FILE="$HOME/.config/lore/tg_offset"
 [ -f "$OFF_FILE" ] || echo 0 > "$OFF_FILE"
+NOTIFIED_NOT_READY=0
 while true; do
+  # Never consume owner messages while the agent pane cannot take input (e.g. folder-trust dialog,
+  # not running). Updates stay queued at Telegram and are delivered once the pane is ready.
+  # "Not ready" = session missing, or the *last lines* of the pane are the folder-trust dialog itself
+  # (cursor row + choices + confirm hint). Matching bare words would trip on ordinary transcript text.
+  if ! tmux has-session -t "${PANE%%:*}" 2>/dev/null \
+     || tmux capture-pane -p -t "$PANE" 2>/dev/null | grep -v '^[[:space:]]*$' | tail -6 \
+        | tr -d '\n' | grep -qE "No, exit.*Yes, I trust this folder.*Enter to confirm"; then
+    if [ "$NOTIFIED_NOT_READY" = 0 ]; then
+      NOTIFY_DM=1 /root/lore-intelligence/ops/notify.sh "⚠️ agent pane in tmux is not ready (needs folder-trust confirmation: run 'tmux attach -t lore', pick 'Yes, I trust this folder', then Ctrl-b d). Your Telegram messages are being held, not lost." 2>/dev/null || true
+      NOTIFIED_NOT_READY=1
+    fi
+    sleep 15; continue
+  fi
+  NOTIFIED_NOT_READY=0
   OFF=$(cat "$OFF_FILE")
   RESP=$(curl -sS --max-time 40 "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?timeout=25&offset=${OFF}" 2>/dev/null || true)
   [ -z "$RESP" ] && { sleep 5; continue; }
@@ -24,7 +39,10 @@ for u in d.get("result", []):
     if cid not in (owner, group) or str((m.get("from") or {}).get("id", "")) != owner:
         continue
     t = m.get("text")
-    if t: print(json.dumps(t), flush=True)
+    if t:
+        import time
+        open(os.path.expanduser("~/.config/lore/last_chat"), "w").write("%s %d" % (cid, int(time.time())))
+        print(json.dumps(t), flush=True)
 if mx is not None: open(os.environ["OFF_FILE"], "w").write(str(mx + 1))
 ' <<<"$RESP" | while IFS= read -r line; do
     TEXT=$(python3 -I -c 'import sys,json; print(json.loads(sys.stdin.read()))' <<<"$line")

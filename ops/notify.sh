@@ -9,6 +9,8 @@ ENV_FILE="${LORE_TELEGRAM_ENV:-$HOME/.config/lore/telegram.env}"
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 : "${TELEGRAM_BOT_TOKEN:?}" "${TELEGRAM_CHAT_ID:?}"
+TARGET="${TELEGRAM_GROUP_CHAT_ID:-$TELEGRAM_CHAT_ID}"
+[ "${NOTIFY_DM:-0}" = 1 ] && TARGET="${TELEGRAM_CHAT_ID}"
 curl -sS --max-time 15 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-  --data-urlencode "chat_id=$([ "${NOTIFY_DM:-0}" = 1 ] && echo "${TELEGRAM_CHAT_ID}" || echo "${TELEGRAM_GROUP_CHAT_ID:-$TELEGRAM_CHAT_ID}")" \
+  --data-urlencode "chat_id=${TARGET}" \
   --data-urlencode "text=${1:?message required}" >/dev/null
