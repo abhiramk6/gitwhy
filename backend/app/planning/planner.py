@@ -38,11 +38,16 @@ def _label(evidence_type: str, status: str) -> str:
 def _primary_services(conn, org, request: str, hits) -> tuple[dict[str, float], dict[str, str]]:
     pts: Counter = Counter()
     why: dict[str, str] = {}
+    # Only corroborated evidence earns anchor points: an identifier hit, or keyword AND vector agreement.
+    # A single weak signal counts half; graph-expansion-only hits count nothing (they follow seeds, not the request).
+    strong_hits = [h for h in hits if "identifier" in h.signals or ("keyword" in h.signals and "vector" in h.signals)]
     for h in hits[:12]:  # (a) repository of retrieved evidence
         if h.repo:
-            pts[h.repo] += 1
-            why.setdefault(h.repo, f"retrieved evidence from {h.repo}")
-    texts = request + " " + " ".join(h.snippet + " " + h.title for h in hits[:8])
+            w = 1.0 if h in strong_hits else 0.5 if ("keyword" in h.signals or "vector" in h.signals) else 0.0
+            if w:
+                pts[h.repo] += w
+                why.setdefault(h.repo, f"retrieved evidence from {h.repo}")
+    texts = request + " " + " ".join(h.snippet + " " + h.title for h in strong_hits[:8])
     eps = conn.execute("SELECT e.canonical_name, r.name AS repo FROM entities e JOIN repositories r ON r.id=e.repository_id "
                        "WHERE e.organization_id=%s AND e.entity_type='endpoint'", (org,)).fetchall()
     for path in set(PATH_RE.findall(texts)):  # (c) API path mentioned => owning service
@@ -56,12 +61,24 @@ def _primary_services(conn, org, request: str, hits) -> tuple[dict[str, float], 
         "JOIN entities pr ON pr.id=i.src_id JOIN repositories rp ON rp.id=pr.repository_id "
         "JOIN entities s ON s.entity_type='service' AND s.canonical_name=rp.name AND s.organization_id=t.organization_id "
         "WHERE t.organization_id=%s AND t.entity_type='ticket' GROUP BY 1,2 ORDER BY n DESC", (org,))}
-    for h in hits[:12]:
-        if h.source_type == "jira_issue" and h.source_id.split("-")[0] in proj:
-            repo = proj[h.source_id.split("-")[0]]
-            pts[repo] += 2
-            why[repo] = f"{h.source_id} belongs to the {h.source_id.split('-')[0]} project (implemented in {repo})"
+    seen_projects: set[str] = set()  # many tickets from one project are one piece of evidence, not many
+    for h in strong_hits[:12]:
+        key = h.source_id.split("-")[0]
+        if h.source_type == "jira_issue" and key in proj and key not in seen_projects:
+            seen_projects.add(key)
+            pts[proj[key]] += 2
+            why[proj[key]] = f"{h.source_id} belongs to the {key} project (implemented in {proj[key]})"
+    names = [r["name"] for r in conn.execute("SELECT name FROM repositories WHERE organization_id=%s", (org,))]
+    for name in names:  # a service named in the request is a grounded anchor
+        if re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", request.lower()):
+            pts[name] += 3
+            why[name] = f"{name} is named in the request"
     return pts, why
+
+
+# A plan needs at least this much grounded evidence (named service, API path, ticket project, or several
+# retrieved records from one repository). Weak lexical/vector matches alone must not produce a plan.
+MIN_ANCHOR = 3
 
 
 def create_plan(conn: psycopg.Connection, org_id: int, provider: Provider, request: str,
@@ -69,7 +86,7 @@ def create_plan(conn: psycopg.Connection, org_id: int, provider: Provider, reque
     ev = Evidence()
     hits = search(conn, org_id, provider, request, k=12)
     pts, why = _primary_services(conn, org_id, request, hits)
-    if not pts:
+    if not pts or max(pts.values()) < MIN_ANCHOR:
         return {"request": request, "status": "insufficient_evidence", "open_questions":
                 ["No repository or service could be linked to this request. Name an API, ticket or component."]}
     top = max(pts.values())

@@ -1,0 +1,106 @@
+{
+  "retrieval": [
+    {
+      "q": "PAY-142",
+      "expect_any": [
+        "PAY-142"
+      ],
+      "k": 3
+    },
+    {
+      "q": "outbound HTTP must use the platform client with timeouts and retries",
+      "expect_any": [
+        "ADR-004"
+      ],
+      "k": 5
+    },
+    {
+      "q": "which decision replaced synchronous calls between payments and ledger",
+      "expect_any": [
+        "ADR-007"
+      ],
+      "k": 5
+    },
+    {
+      "q": "why do errors use problem+json in payments",
+      "expect_any": [
+        "ADR-005"
+      ],
+      "k": 5
+    },
+    {
+      "q": "duplicate notification sends de-dupe",
+      "expect_any": [
+        "NTF-27"
+      ],
+      "k": 5
+    },
+    {
+      "q": "settlement file reconcile fails on large files",
+      "expect_any": [
+        "LED-71"
+      ],
+      "k": 5
+    },
+    {
+      "q": "migrate ledger amounts to wider numeric type",
+      "expect_any": [
+        "LED-88"
+      ],
+      "k": 5
+    },
+    {
+      "q": "kubernetes helm chart for the mobile app",
+      "expect_none": true,
+      "needs_semantic_provider": true
+    }
+  ],
+  "plans": [
+    {
+      "name": "partial refunds",
+      "request": "Add support for partial refunds on captured payments (PAY-142)",
+      "components": [
+        "payments-api",
+        "ledger-core",
+        "notify-svc",
+        "customer-portal"
+      ],
+      "decisions": [
+        "ADR-007",
+        "ADR-004",
+        "ADR-003"
+      ],
+      "not_decisions": [
+        "ADR-002"
+      ],
+      "risk_markers": [
+        "LED-88",
+        "stale_reference",
+        "dana.okafor"
+      ],
+      "reuse_markers": [
+        "IdempotencyStore"
+      ]
+    },
+    {
+      "name": "notification retries",
+      "request": "Add configurable retries to notification delivery in notify-svc",
+      "components": [
+        "notify-svc"
+      ],
+      "decisions": [
+        "ADR-004"
+      ],
+      "not_decisions": [
+        "ADR-002"
+      ],
+      "risk_markers": [],
+      "reuse_markers": []
+    },
+    {
+      "name": "out of scope",
+      "request": "Train a recommendation model for advertising banners",
+      "expect_insufficient": true
+    }
+  ]
+}

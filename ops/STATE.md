@@ -23,8 +23,15 @@ Updated: 2026-10-15
   React UI (4 screens) served by backend. 43 backend tests + 14-step headless-browser e2e pass (no console errors,
   no overflow at 390px). Dev DB cleaned of e2e artifacts.
 
+- Stage 6/7 prep (offline): Dockerfile, deploy/deploy.sh (plan mode verified, apply NOT run), cost_watch.sh (untested
+  without gcloud auth), watchdog.sh running in tmux window `watchdog`, eval/known_answers.json + scripts/evaluate.py
+  (ALL PASS; 1 retrieval case SKIPPED on offline provider), seed command, README/demo-script/operations docs.
+- Planner fixes found by eval: anchor rule (MIN_ANCHOR), corroborated-evidence points, project evidence counted once.
+  46 backend tests pass.
+
 ## Next
-- Prepare offline: Dockerfile, Cloud Build/Run configs, eval script, cost watcher (Stage 6/7 prep).
+- BLOCKED on owner: GCP trial + gcloud login (deploy), GitHub login (private repo), new bot token.
+- When unblocked: `PROJECT_ID=... deploy/deploy.sh apply` after owner approves billable resources; then calibrate Vertex.
 - Stage 6: GCP deploy (blocked on owner: GCP trial + gcloud login + approval for billable resources).
 - Stage 7: hardening, demo script, fallback mode.
 

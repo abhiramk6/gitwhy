@@ -85,3 +85,20 @@ def test_model_output_with_unsupported_claims_is_discarded(conn, org):
 
     plan = create_plan(conn, org, Bad(), REQ, persist=False)
     assert all(d["adr"] != "ADR-999" for d in plan["decisions"])
+
+
+def test_out_of_scope_request_is_refused(conn, org):
+    plan = create_plan(conn, org, P, "Train a recommendation model for advertising banners", persist=False)
+    assert plan["status"] == "insufficient_evidence" and plan["open_questions"]
+
+
+def test_named_service_anchors_the_plan(conn, org):
+    plan = create_plan(conn, org, P, "Add configurable retries to notification delivery in notify-svc", persist=False)
+    assert plan["affected_components"][0]["service"] == "notify-svc"
+    assert unsupported_claims(plan) == []
+
+
+def test_many_tickets_from_one_project_do_not_outvote_real_evidence(conn, org):
+    plan = create_plan(conn, org, P, REQ, persist=False)
+    primary = [c["service"] for c in plan["affected_components"] if c["role"] == "primary"]
+    assert primary == ["payments-api"]
