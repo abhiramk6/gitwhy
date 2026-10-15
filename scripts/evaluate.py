@@ -3,7 +3,8 @@
 
 Usage: DATABASE_URL=... python scripts/evaluate.py [--out docs/eval-report.md]
 Expected answers come from eval/known_answers.json (derived from the synthetic data, not from model output).
-Exits non-zero if any retrieval or plan case fails or any plan contains an unsupported claim.
+Outcomes are PASS / FAIL / SKIPPED. A skipped case is not a pass: the script exits non-zero on any failure, any
+skip, and any plan containing an unsupported claim.
 """
 import argparse
 import json
@@ -13,16 +14,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT / "scripts"))
 
+from _report import CaseMeter, Tally, header  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.db import connect  # noqa: E402
 from app.models.provider import make_provider  # noqa: E402
 from app.planning.planner import create_plan, unsupported_claims  # noqa: E402
-from app.retrieval.search import search  # noqa: E402
-
-
-def provider():
-    return make_provider(get_settings())
+from app.retrieval.search import search_with_meta  # noqa: E402
 
 
 def main() -> int:
@@ -30,24 +29,30 @@ def main() -> int:
     ap.add_argument("--out", default=str(ROOT / "docs" / "eval-report.md"))
     args = ap.parse_args()
     cases = json.loads((ROOT / "eval" / "known_answers.json").read_text())
-    prov = provider()
-    lines, failures = [], 0
+    prov = make_provider(get_settings())
+    lines, tally = [], Tally()
     with connect() as conn:
         org = conn.execute("SELECT id FROM organizations WHERE slug=%s", (get_settings().org_slug,)).fetchone()["id"]
 
-        lines += ["## Retrieval", "", "| Query | Expectation | Result | Rank |", "|---|---|---|---|"]
+        lines += ["## Retrieval", "", "| Query | Expectation | Mode | Model calls | Result | Rank |",
+                  "|---|---|---|---|---|---|"]
         rr, hits_at_k, pos = [], 0, 0
         for c in cases["retrieval"]:
             print(f"retrieval: {c['q']}", file=sys.stderr, flush=True)
-            hits = search(conn, org, prov, c["q"], k=c.get("k", 5))
+            with CaseMeter() as cm:
+                hits, meta = search_with_meta(conn, org, prov, c["q"], k=c.get("k", 5))
             ids = [h.source_id for h in hits]
-            if c.get("expect_none") and c.get("needs_semantic_provider") and prov.name.startswith("offline"):
-                lines.append(f"| {c['q']} | no relevant results | SKIPPED: offline hashing embeddings cannot "
-                             "reject unsupported queries; verify with the Vertex provider | – |")
-                continue
             if c.get("expect_none"):
+                if not prov.has_llm and meta["mode"] == "lexical":
+                    # Rejecting an unsupported query is a relevance judgment; lexical search cannot make it.
+                    tally.add("SKIPPED")
+                    lines.append(f"| {c['q']} | no relevant results | {meta['mode']} | {cm.text()} | SKIPPED: "
+                                 "needs an LLM relevance judgment | – |")
+                    continue
                 ok = len(hits) == 0
-                lines.append(f"| {c['q']} | no relevant results | {'PASS' if ok else 'FAIL: ' + ', '.join(ids[:3])} | – |")
+                tally.add("PASS" if ok else "FAIL")
+                lines.append(f"| {c['q']} | no relevant results | {meta['mode']} | {cm.text()} | "
+                             f"{'PASS' if ok else 'FAIL: ' + ', '.join(ids[:3])} | – |")
             else:
                 pos += 1
                 # identity match: an ADR source id looks like "repo:docs/adr/ADR-004-name.md"
@@ -56,19 +61,21 @@ def main() -> int:
                 ok = rank is not None
                 hits_at_k += ok
                 rr.append(1 / rank if rank else 0.0)
-                lines.append(f"| {c['q']} | {' / '.join(c['expect_any'])} in top {c.get('k', 5)} | "
-                             f"{'PASS' if ok else 'FAIL'} | {rank or '–'} |")
-            failures += 0 if ok else 1
+                tally.add("PASS" if ok else "FAIL")
+                lines.append(f"| {c['q']} | {' / '.join(c['expect_any'])} in top {c.get('k', 5)} | {meta['mode']} | "
+                             f"{cm.text()} | {'PASS' if ok else 'FAIL'} | {rank or '–'} |")
         lines += ["", f"- hit rate@k: **{hits_at_k}/{pos}**; MRR: **{sum(rr) / max(len(rr), 1):.2f}**", ""]
 
         lines += ["## Planning", "", "| Case | Check | Result |", "|---|---|---|"]
         total_claims = unsupported = 0
         for c in cases["plans"]:
             print(f"plan: {c['name']}", file=sys.stderr, flush=True)
-            plan = create_plan(conn, org, prov, c["request"], persist=False)
+            with CaseMeter() as cm:
+                plan = create_plan(conn, org, prov, c["request"], persist=False)
             if plan.get("status") == "llm_required":
-                lines.append(f"| {c['request'][:60]} | plan | SKIPPED: planning needs an LLM provider "
-                             "(PROVIDER=gemini + GEMINI_API_KEY, or vertex) |")
+                tally.add("SKIPPED")
+                lines.append(f"| {c['name']} | plan | SKIPPED: planning needs an LLM provider "
+                             "(PROVIDER=gemini + GEMINI_API_KEY, or vertex) and no cached judgment exists |")
                 continue
             checks: list[tuple[str, bool]] = []
             if c.get("expect_insufficient"):
@@ -91,21 +98,20 @@ def main() -> int:
                 unsupported += len(bad)
                 checks.append(("no unsupported claims", not bad))
             for name, ok in checks:
-                failures += 0 if ok else 1
+                tally.add("PASS" if ok else "FAIL")
                 lines.append(f"| {c['name']} | {name} | {'PASS' if ok else 'FAIL'} |")
+            lines.append(f"| {c['name']} | _model calls: {cm.text()} · search mode: {plan.get('search_mode')} · "
+                         f"guard drops: {len(plan.get('dropped_claims', []))}_ | – |")
         rate = unsupported / total_claims if total_claims else 0.0
         lines += ["", f"- unsupported-claim rate: **{rate:.1%}** ({unsupported}/{total_claims} claims)", ""]
+        prov_lines = header(prov, conn, org)
 
-    usage = getattr(prov, "usage", None)
-    header = ["# Evaluation report", "",
-              f"Provider: `{prov.name}` · Organization: synthetic Northwind Labs · Result: "
-              f"**{'ALL PASS' if failures == 0 else str(failures) + ' FAILURE(S)'}**", "",
-              "Baselines are measured on the synthetic dataset only; they are not claims about real organizations.", ""]
-    if usage:
-        header += [f"Model usage this run: {usage}; models answered: {getattr(prov, 'last_model', '?')}", ""]
-    Path(args.out).write_text("\n".join(header + lines) + "\n")
-    print("\n".join(header + lines))
-    return 1 if failures else 0
+    out = ["# Evaluation report", "", f"Organization: synthetic Northwind Labs · Result: {tally.line()}", "",
+           "Baselines are measured on the synthetic dataset only; they are not claims about real organizations.", "",
+           "## Run provenance", ""] + prov_lines + [""]
+    Path(args.out).write_text("\n".join(out + lines) + "\n")
+    print("\n".join(out + lines))
+    return tally.exit_code
 
 
 if __name__ == "__main__":

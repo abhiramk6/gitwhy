@@ -130,7 +130,12 @@ def _hydrate(conn, org, keys: list[tuple[str, int]], spans: dict, headline_q: st
 def search_with_meta(conn: psycopg.Connection, org_id: int, provider: Provider, query: str, k: int = 10,
                      per_signal: int = 40) -> tuple[list[Hit], dict]:
     s = get_settings()
-    meta: dict = {"mode": "lexical", "analysis": None, "semantic": bool(provider.semantic_embeddings)}
+    meta: dict = {"mode": "lexical", "analysis": None, "semantic": False}
+    if provider.semantic_embeddings:
+        # Vectors only count if the corpus holds vectors of THIS model; a model mismatch is reported, not hidden.
+        n = conn.execute("SELECT count(*) AS n FROM embeddings WHERE organization_id=%s AND model=%s",
+                         (org_id, provider.embed_model)).fetchone()["n"]
+        meta.update(semantic=n > 0, vectors=n, embed_model=provider.embed_model)
     analysis = None
     try:
         analysis = run_task(conn, org_id, provider, "query_analysis", tasks.QUERY_ANALYSIS["system"],
@@ -142,7 +147,7 @@ def search_with_meta(conn: psycopg.Connection, org_id: int, provider: Provider, 
     exact = _exact(conn, org_id, " ".join([query] + (analysis["identifiers"] if analysis else [])))
     kw_lists = [_keyword_ranked(conn, org_id, q, per_signal) for q in queries]
     vec, spans = [], {}
-    if provider.semantic_embeddings:
+    if meta["semantic"]:
         vec, spans = _vector(conn, org_id, provider, (analysis or {}).get("answer_sketch") or query, per_signal)
     scores: dict[tuple[str, int], float] = {}
     sig: dict[tuple[str, int], dict[str, int]] = {}

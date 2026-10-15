@@ -14,11 +14,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
+from _report import CaseMeter, Tally, header  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.db import connect  # noqa: E402
 from app.models.provider import make_provider  # noqa: E402
 from app.planning.planner import create_plan, unsupported_claims  # noqa: E402
-from app.retrieval.search import search  # noqa: E402
+from app.retrieval.search import search_with_meta  # noqa: E402
 
 
 def main() -> int:
@@ -28,27 +29,32 @@ def main() -> int:
     cases = json.loads((ROOT / "eval" / "oss_cases.json").read_text())
     s = get_settings()
     prov = make_provider(s)
-    out = [f"# Open-source demo report ({cases['org_slug']})", "",
-           f"Provider: `{prov.name}`. Real public GitHub history for 8 repositories plus a synthetic team-knowledge "
-           "overlay (ADR-101..108, runbooks).", "", "## Retrieval", "",
-           "| Query | Expected (any of) | Rank | Top results | Result |", "|---|---|---|---|---|"]
-    fails = 0
+    tally = Tally()
     with connect() as conn:
         org = conn.execute("SELECT id FROM organizations WHERE slug=%s", (cases["org_slug"],)).fetchone()["id"]
+        out = [f"# Open-source demo report ({cases['org_slug']})", "",
+               "Real public GitHub history for 8 repositories plus a synthetic team-knowledge overlay "
+               "(ADR-101..108, runbooks).", ""]
+        body = ["## Retrieval", "", "| Query | Expected (any of) | Rank | Mode | Model calls | Top results | Result |",
+                "|---|---|---|---|---|---|---|"]
         for c in cases["retrieval"]:
-            hits = search(conn, org, prov, c["q"], k=c.get("k", 5))
+            with CaseMeter() as cm:
+                hits, meta = search_with_meta(conn, org, prov, c["q"], k=c.get("k", 5))
             ids = [h.source_id for h in hits]
             rank = next((i for i, h in enumerate(ids, 1) if any(
                 re.search(rf"(^|[^A-Za-z0-9]){re.escape(e)}([^0-9]|$)", h) for e in c["expect_any"])), None)
-            fails += rank is None
+            tally.add("PASS" if rank else "FAIL", c.get("split", "dev"))
             top = "<br>".join(f"{h.source_id} ({'+'.join(h.signals)})" for h in hits[:3])
-            out.append(f"| {c['q']} | {', '.join(c['expect_any'][:2])} | {rank or '-'} | {top} | "
-                       f"{'PASS' if rank else 'FAIL'} |")
-        out += ["", "## Feature plans", ""]
+            body.append(f"| {c['q']} | {', '.join(c['expect_any'][:2])} | {rank or '-'} | {meta['mode']} | "
+                        f"{cm.text()} | {top} | {'PASS' if rank else 'FAIL'} |")
+        body += ["", "## Feature plans", ""]
         for c in cases["plans"]:
-            plan = create_plan(conn, org, prov, c["request"], persist=False)
+            with CaseMeter() as cm:
+                plan = create_plan(conn, org, prov, c["request"], persist=False)
             if plan.get("status") == "llm_required":
-                out += [f"### SKIPPED — {c['request']}", "", "Planning needs an LLM provider; none configured.", ""]
+                tally.add("SKIPPED", c.get("split", "dev"))
+                body += [f"### SKIPPED — {c['request']}", "",
+                         f"Planning needs an LLM provider and no cached judgment exists (model calls: {cm.text()}).", ""]
                 continue
             problems = []
             if "expect_status" in c:
@@ -63,25 +69,30 @@ def main() -> int:
                 problems += [f"missing {x}" for x in c.get("expect_decisions", []) if x not in adrs]
                 problems += [f"should not include {x}" for x in c.get("exclude_decisions", []) if x in adrs]
                 problems += unsupported_claims(plan)
-            fails += bool(problems)
-            out += [f"### {'PASS' if not problems else 'FAIL'} — {c['request']}", "", f"_Why this case:_ {c['why']}", ""]
+            tally.add("FAIL" if problems else "PASS", c.get("split", "dev"))
+            body += [f"### {'PASS' if not problems else 'FAIL'} — {c['request']}", "",
+                     f"_Why this case:_ {c['why']}", "",
+                     f"_Search mode:_ {plan.get('search_mode')} · _model calls:_ {cm.text()} · "
+                     f"_guard drops:_ {len(plan.get('dropped_claims', []))}", ""]
             if problems:
-                out += [f"**Problems:** {'; '.join(problems)}", ""]
+                body += [f"**Problems:** {'; '.join(problems)}", ""]
             if plan.get("status") == "insufficient_evidence":
-                out += [f"Planner response: `insufficient_evidence` — {plan['open_questions'][0]}", ""]
+                body += [f"Planner response: `insufficient_evidence` — {plan['open_questions'][0]}", ""]
                 continue
-            out += ["| Component | Role | Label | Reason |", "|---|---|---|---|"]
-            out += [f"| {x['service']} | {x['role']} | {x['label']} | {x['reason']} |" for x in plan["affected_components"]]
-            out += ["", "Governing decisions: " + (", ".join(f"{d['adr']} ({d['label']})" for d in plan["decisions"]) or "none"), ""]
+            body += ["| Component | Role | Label | Reason |", "|---|---|---|---|"]
+            body += [f"| {x['service']} | {x['role']} | {x['label']} | {x['reason']} |" for x in plan["affected_components"]]
+            body += ["", "Governing decisions: " + (", ".join(f"{d['adr']} ({d['label']})" for d in plan["decisions"]) or "none"), ""]
             for r in plan["risks"][:5]:
-                out.append(f"- risk [{r['label']}] {r['summary']}")
+                body.append(f"- risk [{r['label']}] {r['summary']}")
             for t in plan["tasks"][:6]:
-                out.append(f"- task [{t.get('label', 'proposed')}] {t['id']} {t['title']}")
-            out.append("")
-    out += ["---", f"**Failed expectations: {fails}**"]
+                body.append(f"- task [{t.get('label', 'proposed')}] {t['id']} {t['title']}")
+            body.append("")
+        out += ["## Run provenance", ""] + header(prov, conn, org, demo_corpus=True) + [""] + body
+    fails = tally.failed
+    out += ["---", f"**Result: {tally.line()}**", f"**Failed expectations: {fails}**"]
     Path(a.out).write_text("\n".join(out) + "\n")
     print("\n".join(out[-3:]), f"\nwrote {a.out}")
-    return 1 if fails else 0
+    return tally.exit_code
 
 
 if __name__ == "__main__":
