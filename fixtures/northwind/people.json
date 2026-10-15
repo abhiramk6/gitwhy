@@ -1,0 +1,44 @@
+[
+  {
+    "email": "dana.okafor@northwind.example",
+    "login": "dana.okafor",
+    "name": "Dana Okafor",
+    "synthetic": true,
+    "team": "Payments"
+  },
+  {
+    "email": "priya.raman@northwind.example",
+    "login": "priya.raman",
+    "name": "Priya Raman",
+    "synthetic": true,
+    "team": "Payments"
+  },
+  {
+    "email": "marcus.lee@northwind.example",
+    "login": "marcus.lee",
+    "name": "Marcus Lee",
+    "synthetic": true,
+    "team": "Platform"
+  },
+  {
+    "email": "ines.kowalski@northwind.example",
+    "login": "ines.kowalski",
+    "name": "Ines Kowalski",
+    "synthetic": true,
+    "team": "Platform"
+  },
+  {
+    "email": "sofia.alvarez@northwind.example",
+    "login": "sofia.alvarez",
+    "name": "Sofia Alvarez",
+    "synthetic": true,
+    "team": "Experience"
+  },
+  {
+    "email": "tom.becker@northwind.example",
+    "login": "tom.becker",
+    "name": "Tom Becker",
+    "synthetic": true,
+    "team": "Experience"
+  }
+]

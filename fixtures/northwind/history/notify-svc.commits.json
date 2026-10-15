@@ -1,0 +1,266 @@
+[
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-03-15",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "notify/__init__.py"
+    ],
+    "message": "fix(notify): update __init__.py (#1)",
+    "repo": "notify-svc",
+    "sha": "f72fd1f186fe"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-03-22",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "notify/api.py"
+    ],
+    "message": "feat(notify): update api.py (#2)",
+    "repo": "notify-svc",
+    "sha": "151565730136"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-03-30",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "notify/dedupe.py"
+    ],
+    "message": "feat(notify): update dedupe.py (#3)",
+    "repo": "notify-svc",
+    "sha": "7d5b61b23268"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-04-07",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "notify/sender.py"
+    ],
+    "message": "fix(notify): update sender.py (#4)",
+    "repo": "notify-svc",
+    "sha": "b1e91b540bc5"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-04-15",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "notify/__init__.py"
+    ],
+    "message": "feat(notify): update __init__.py (#5)",
+    "repo": "notify-svc",
+    "sha": "48ecb38ddd81"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-04-23",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "notify/api.py"
+    ],
+    "message": "feat(notify): update api.py (#6)",
+    "repo": "notify-svc",
+    "sha": "7e273dbb8b59"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-05-01",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "notify/dedupe.py"
+    ],
+    "message": "fix(notify): update dedupe.py (#7)",
+    "repo": "notify-svc",
+    "sha": "0ff6440140bc"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-05-09",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "notify/sender.py"
+    ],
+    "message": "feat(notify): update sender.py (#8)",
+    "repo": "notify-svc",
+    "sha": "6689b3ff5750"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-05-16",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "notify/__init__.py"
+    ],
+    "message": "feat(notify): update __init__.py (#9)",
+    "repo": "notify-svc",
+    "sha": "88dd40c53f30"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-05-24",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "notify/api.py"
+    ],
+    "message": "fix(notify): update api.py (#10)",
+    "repo": "notify-svc",
+    "sha": "363f1e7e95ac"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-06-01",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "notify/dedupe.py"
+    ],
+    "message": "feat(notify): update dedupe.py (#11)",
+    "repo": "notify-svc",
+    "sha": "147e0c25e764"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-06-09",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "notify/sender.py"
+    ],
+    "message": "feat(notify): update sender.py (#12)",
+    "repo": "notify-svc",
+    "sha": "2b4f3636734f"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-06-17",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "notify/__init__.py"
+    ],
+    "message": "fix(notify): update __init__.py (#13)",
+    "repo": "notify-svc",
+    "sha": "bfe42a2eff75"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-06-25",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "notify/api.py"
+    ],
+    "message": "feat(notify): update api.py (#14)",
+    "repo": "notify-svc",
+    "sha": "c4185e646ee0"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-07-03",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "notify/dedupe.py"
+    ],
+    "message": "feat(notify): update dedupe.py (#15)",
+    "repo": "notify-svc",
+    "sha": "bb0a2a6e5367"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-07-11",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "notify/sender.py"
+    ],
+    "message": "fix(notify): update sender.py (#16)",
+    "repo": "notify-svc",
+    "sha": "b8376bd2523a"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-07-18",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "notify/__init__.py"
+    ],
+    "message": "feat(notify): update __init__.py (#17)",
+    "repo": "notify-svc",
+    "sha": "c3e05fbf268b"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-07-26",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "notify/api.py"
+    ],
+    "message": "feat(notify): update api.py (#18)",
+    "repo": "notify-svc",
+    "sha": "3e5595deec7e"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-08-03",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "notify/dedupe.py"
+    ],
+    "message": "fix(notify): update dedupe.py (#19)",
+    "repo": "notify-svc",
+    "sha": "9e30f67e31b9"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-08-11",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "notify/sender.py"
+    ],
+    "message": "feat(notify): update sender.py (#20)",
+    "repo": "notify-svc",
+    "sha": "88dc0a8c9848"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-08-19",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "notify/__init__.py"
+    ],
+    "message": "feat(notify): update __init__.py (#21)",
+    "repo": "notify-svc",
+    "sha": "fe6400dfb6c9"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-08-27",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "notify/api.py"
+    ],
+    "message": "fix(notify): update api.py (#22)",
+    "repo": "notify-svc",
+    "sha": "3fc91eb16614"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-09-04",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "notify/dedupe.py"
+    ],
+    "message": "feat(notify): update dedupe.py (#23)",
+    "repo": "notify-svc",
+    "sha": "446c935b6ac9"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-09-12",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "notify/sender.py"
+    ],
+    "message": "feat(notify): update sender.py (#24)",
+    "repo": "notify-svc",
+    "sha": "48e0c0231e50"
+  }
+]

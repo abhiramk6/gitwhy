@@ -1,0 +1,266 @@
+[
+  {
+    "author": "priya.raman",
+    "date": "2026-03-15",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "payments/__init__.py"
+    ],
+    "message": "fix(payments): update __init__.py (#1)",
+    "repo": "payments-api",
+    "sha": "a0f00c784abb"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-03-22",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "payments/api.py"
+    ],
+    "message": "feat(payments): update api.py (#2)",
+    "repo": "payments-api",
+    "sha": "5c3cd4c66154"
+  },
+  {
+    "author": "ines.kowalski",
+    "date": "2026-03-30",
+    "email": "ines.kowalski@northwind.example",
+    "files": [
+      "payments/ledger_client.py"
+    ],
+    "message": "feat(payments): update ledger_client.py (#3)",
+    "repo": "payments-api",
+    "sha": "83b11929cf2f"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-04-07",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "payments/notifier.py"
+    ],
+    "message": "fix(payments): update notifier.py (#4)",
+    "repo": "payments-api",
+    "sha": "e0b26994f56b"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-04-15",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "payments/__init__.py"
+    ],
+    "message": "feat(payments): update __init__.py (#5)",
+    "repo": "payments-api",
+    "sha": "f6f99a92d8bb"
+  },
+  {
+    "author": "ines.kowalski",
+    "date": "2026-04-23",
+    "email": "ines.kowalski@northwind.example",
+    "files": [
+      "payments/api.py"
+    ],
+    "message": "feat(payments): update api.py (#6)",
+    "repo": "payments-api",
+    "sha": "9d9547226417"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-05-01",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "payments/ledger_client.py"
+    ],
+    "message": "fix(payments): update ledger_client.py (#7)",
+    "repo": "payments-api",
+    "sha": "2b8106f50592"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-05-09",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "payments/notifier.py"
+    ],
+    "message": "feat(payments): update notifier.py (#8)",
+    "repo": "payments-api",
+    "sha": "a5eeaffed15e"
+  },
+  {
+    "author": "ines.kowalski",
+    "date": "2026-05-16",
+    "email": "ines.kowalski@northwind.example",
+    "files": [
+      "payments/__init__.py"
+    ],
+    "message": "feat(payments): update __init__.py (#9)",
+    "repo": "payments-api",
+    "sha": "ccacb4494a18"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-05-24",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "payments/api.py"
+    ],
+    "message": "fix(payments): update api.py (#10)",
+    "repo": "payments-api",
+    "sha": "d37e6b88d3b1"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-06-01",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "payments/ledger_client.py"
+    ],
+    "message": "feat(payments): update ledger_client.py (#11)",
+    "repo": "payments-api",
+    "sha": "156d579e0e81"
+  },
+  {
+    "author": "ines.kowalski",
+    "date": "2026-06-09",
+    "email": "ines.kowalski@northwind.example",
+    "files": [
+      "payments/notifier.py"
+    ],
+    "message": "feat(payments): update notifier.py (#12)",
+    "repo": "payments-api",
+    "sha": "23203ed6b4ec"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-06-17",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "payments/__init__.py"
+    ],
+    "message": "fix(payments): update __init__.py (#13)",
+    "repo": "payments-api",
+    "sha": "124ce6296e8a"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-06-25",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "payments/api.py"
+    ],
+    "message": "feat(payments): update api.py (#14)",
+    "repo": "payments-api",
+    "sha": "8aee68b1b938"
+  },
+  {
+    "author": "ines.kowalski",
+    "date": "2026-07-03",
+    "email": "ines.kowalski@northwind.example",
+    "files": [
+      "payments/ledger_client.py"
+    ],
+    "message": "feat(payments): update ledger_client.py (#15)",
+    "repo": "payments-api",
+    "sha": "f3c4707d57e2"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-07-11",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "payments/notifier.py"
+    ],
+    "message": "fix(payments): update notifier.py (#16)",
+    "repo": "payments-api",
+    "sha": "850c6e9d3b00"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-07-18",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "payments/__init__.py"
+    ],
+    "message": "feat(payments): update __init__.py (#17)",
+    "repo": "payments-api",
+    "sha": "3fe8121d4d25"
+  },
+  {
+    "author": "ines.kowalski",
+    "date": "2026-07-26",
+    "email": "ines.kowalski@northwind.example",
+    "files": [
+      "payments/api.py"
+    ],
+    "message": "feat(payments): update api.py (#18)",
+    "repo": "payments-api",
+    "sha": "3911fef4f00f"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-08-03",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "payments/ledger_client.py"
+    ],
+    "message": "fix(payments): update ledger_client.py (#19)",
+    "repo": "payments-api",
+    "sha": "3edda3af86e9"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-08-11",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "payments/notifier.py"
+    ],
+    "message": "feat(payments): update notifier.py (#20)",
+    "repo": "payments-api",
+    "sha": "b69b90cf14fa"
+  },
+  {
+    "author": "ines.kowalski",
+    "date": "2026-08-19",
+    "email": "ines.kowalski@northwind.example",
+    "files": [
+      "payments/__init__.py"
+    ],
+    "message": "feat(payments): update __init__.py (#21)",
+    "repo": "payments-api",
+    "sha": "187e4fa7fd65"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-08-27",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "payments/api.py"
+    ],
+    "message": "fix(payments): update api.py (#22)",
+    "repo": "payments-api",
+    "sha": "ad8448e52502"
+  },
+  {
+    "author": "marcus.lee",
+    "date": "2026-09-04",
+    "email": "marcus.lee@northwind.example",
+    "files": [
+      "payments/ledger_client.py"
+    ],
+    "message": "feat(payments): update ledger_client.py (#23)",
+    "repo": "payments-api",
+    "sha": "fc8660f4f008"
+  },
+  {
+    "author": "ines.kowalski",
+    "date": "2026-09-12",
+    "email": "ines.kowalski@northwind.example",
+    "files": [
+      "payments/notifier.py"
+    ],
+    "message": "feat(payments): update notifier.py (#24)",
+    "repo": "payments-api",
+    "sha": "49eb01be3312"
+  }
+]

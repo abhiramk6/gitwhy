@@ -1,0 +1,266 @@
+[
+  {
+    "author": "tom.becker",
+    "date": "2026-03-15",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "fix(portal): update __init__.py (#1)",
+    "repo": "customer-portal",
+    "sha": "41c1b906f652"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-03-22",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "feat(portal): update bff.py (#2)",
+    "repo": "customer-portal",
+    "sha": "9945211a1983"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-03-30",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "feat(portal): update __init__.py (#3)",
+    "repo": "customer-portal",
+    "sha": "b8ae7172c5c5"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-04-07",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "fix(portal): update bff.py (#4)",
+    "repo": "customer-portal",
+    "sha": "19a7cd6827d7"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-04-15",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "feat(portal): update __init__.py (#5)",
+    "repo": "customer-portal",
+    "sha": "2492b360827a"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-04-23",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "feat(portal): update bff.py (#6)",
+    "repo": "customer-portal",
+    "sha": "c36e67b0a15e"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-05-01",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "fix(portal): update __init__.py (#7)",
+    "repo": "customer-portal",
+    "sha": "12edbcd3cb03"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-05-09",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "feat(portal): update bff.py (#8)",
+    "repo": "customer-portal",
+    "sha": "80a546a5eab1"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-05-16",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "feat(portal): update __init__.py (#9)",
+    "repo": "customer-portal",
+    "sha": "c888d6bc0c94"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-05-24",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "fix(portal): update bff.py (#10)",
+    "repo": "customer-portal",
+    "sha": "a1ece9d1b997"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-06-01",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "feat(portal): update __init__.py (#11)",
+    "repo": "customer-portal",
+    "sha": "1376241177d1"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-06-09",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "feat(portal): update bff.py (#12)",
+    "repo": "customer-portal",
+    "sha": "4499b436ef77"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-06-17",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "fix(portal): update __init__.py (#13)",
+    "repo": "customer-portal",
+    "sha": "f16911a57684"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-06-25",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "feat(portal): update bff.py (#14)",
+    "repo": "customer-portal",
+    "sha": "5bcc556730da"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-07-03",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "feat(portal): update __init__.py (#15)",
+    "repo": "customer-portal",
+    "sha": "f0686e1d2d08"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-07-11",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "fix(portal): update bff.py (#16)",
+    "repo": "customer-portal",
+    "sha": "e197d6a7ccb0"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-07-18",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "feat(portal): update __init__.py (#17)",
+    "repo": "customer-portal",
+    "sha": "2eeff8f39f5e"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-07-26",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "feat(portal): update bff.py (#18)",
+    "repo": "customer-portal",
+    "sha": "3def3d5e466e"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-08-03",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "fix(portal): update __init__.py (#19)",
+    "repo": "customer-portal",
+    "sha": "c7d2d82d08d2"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-08-11",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "feat(portal): update bff.py (#20)",
+    "repo": "customer-portal",
+    "sha": "fef63b163408"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-08-19",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "feat(portal): update __init__.py (#21)",
+    "repo": "customer-portal",
+    "sha": "e25fd832addf"
+  },
+  {
+    "author": "tom.becker",
+    "date": "2026-08-27",
+    "email": "tom.becker@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "fix(portal): update bff.py (#22)",
+    "repo": "customer-portal",
+    "sha": "71c172a80adc"
+  },
+  {
+    "author": "sofia.alvarez",
+    "date": "2026-09-04",
+    "email": "sofia.alvarez@northwind.example",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "message": "feat(portal): update __init__.py (#23)",
+    "repo": "customer-portal",
+    "sha": "67fbdf7b43d6"
+  },
+  {
+    "author": "priya.raman",
+    "date": "2026-09-12",
+    "email": "priya.raman@northwind.example",
+    "files": [
+      "portal/bff.py"
+    ],
+    "message": "feat(portal): update bff.py (#24)",
+    "repo": "customer-portal",
+    "sha": "da7dd37232fc"
+  }
+]

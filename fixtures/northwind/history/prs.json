@@ -1,0 +1,1158 @@
+[
+  {
+    "author": "sofia.alvarez",
+    "body": "Provider needs a 30s timeout; http_client caps at 5s.\n\nOverride: ADR-004 reason=provider batch endpoint needs 30s timeout; temporary until http_client supports per-call timeouts; approved-by=ines.kowalski",
+    "created_at": "2026-05-12",
+    "files": [
+      "notify/sender.py"
+    ],
+    "labels": [
+      "override"
+    ],
+    "linked_tickets": [
+      "PLT-12"
+    ],
+    "merged_at": "2026-05-14",
+    "number": 41,
+    "repo": "notify-svc",
+    "reviewers": [
+      "ines.kowalski"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "Send via provider SDK with longer timeout"
+  },
+  {
+    "author": "tom.becker",
+    "body": "Adds capture endpoint to BFF using requests.",
+    "created_at": "2026-07-06",
+    "files": [
+      "portal/bff.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "POR-41"
+    ],
+    "merged_at": "2026-07-08",
+    "number": 57,
+    "repo": "customer-portal",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "Call payments-api capture from BFF"
+  },
+  {
+    "author": "sofia.alvarez",
+    "body": "Avoid duplicate sends.",
+    "created_at": "2026-06-08",
+    "files": [
+      "notify/dedupe.py",
+      "notify/api.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-27"
+    ],
+    "merged_at": "2026-06-10",
+    "number": 48,
+    "repo": "notify-svc",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "Add own de-dupe store for notifications"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Shared idempotency primitive for mutating endpoints.",
+    "created_at": "2026-04-07",
+    "files": [
+      "platform_libs/idempotency.py"
+    ],
+    "labels": [],
+    "linked_tickets": [],
+    "merged_at": "2026-04-09",
+    "number": 22,
+    "repo": "platform-libs",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "Add IdempotencyStore"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Partial work; see LED-71.",
+    "created_at": "2026-04-16",
+    "files": [
+      "ledger/reconcile.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "LED-71"
+    ],
+    "merged_at": "2026-04-18",
+    "number": 30,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "Reconcile: stream settlement file"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Routine change.",
+    "created_at": "2026-03-18",
+    "files": [
+      "ledger/reconcile.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "POR-33"
+    ],
+    "merged_at": "2026-03-20",
+    "number": 31,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "ledger-core: improve reconcile.py (1)"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Routine change.",
+    "created_at": "2026-03-21",
+    "files": [
+      "ledger/models.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-19"
+    ],
+    "merged_at": "2026-03-23",
+    "number": 32,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "ledger-core: improve models.py (2)"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Routine change.",
+    "created_at": "2026-03-24",
+    "files": [
+      "ledger/reconcile.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-98"
+    ],
+    "merged_at": "2026-03-26",
+    "number": 33,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "ledger-core: improve reconcile.py (3)"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Routine change.",
+    "created_at": "2026-03-27",
+    "files": [
+      "ledger/reconcile.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PLT-19"
+    ],
+    "merged_at": "2026-03-29",
+    "number": 34,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "ledger-core: improve reconcile.py (4)"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Routine change.",
+    "created_at": "2026-03-30",
+    "files": [
+      "ledger/reconcile.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-201"
+    ],
+    "merged_at": "2026-04-01",
+    "number": 35,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "ledger-core: improve reconcile.py (5)"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Routine change.",
+    "created_at": "2026-04-02",
+    "files": [
+      "ledger/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-204"
+    ],
+    "merged_at": "2026-04-04",
+    "number": 36,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "ledger-core: improve __init__.py (6)"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Routine change.",
+    "created_at": "2026-04-05",
+    "files": [
+      "ledger/reconcile.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-205"
+    ],
+    "merged_at": "2026-04-07",
+    "number": 37,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "ledger-core: improve reconcile.py (7)"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Routine change.",
+    "created_at": "2026-04-08",
+    "files": [
+      "ledger/entries.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "LED-201"
+    ],
+    "merged_at": "2026-04-10",
+    "number": 38,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "ledger-core: improve entries.py (8)"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Routine change.",
+    "created_at": "2026-04-11",
+    "files": [
+      "ledger/reconcile.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "LED-204"
+    ],
+    "merged_at": "2026-04-13",
+    "number": 39,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "ledger-core: improve reconcile.py (9)"
+  },
+  {
+    "author": "dana.okafor",
+    "body": "Routine change.",
+    "created_at": "2026-04-14",
+    "files": [
+      "ledger/api.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "LED-205"
+    ],
+    "merged_at": "2026-04-16",
+    "number": 40,
+    "repo": "ledger-core",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "ledger-core: improve api.py (10)"
+  },
+  {
+    "author": "priya.raman",
+    "body": "Routine change.",
+    "created_at": "2026-03-27",
+    "files": [
+      "payments/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-201"
+    ],
+    "merged_at": "2026-03-29",
+    "number": 1,
+    "repo": "payments-api",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "payments-api: improve __init__.py (11)"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Routine change.",
+    "created_at": "2026-04-10",
+    "files": [
+      "payments/api.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-204"
+    ],
+    "merged_at": "2026-04-12",
+    "number": 2,
+    "repo": "payments-api",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "payments-api: improve api.py (12)"
+  },
+  {
+    "author": "ines.kowalski",
+    "body": "Routine change.",
+    "created_at": "2026-04-24",
+    "files": [
+      "payments/ledger_client.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-205"
+    ],
+    "merged_at": "2026-04-26",
+    "number": 3,
+    "repo": "payments-api",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "payments-api: improve ledger_client.py (13)"
+  },
+  {
+    "author": "priya.raman",
+    "body": "Routine change.",
+    "created_at": "2026-05-08",
+    "files": [
+      "payments/notifier.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "POR-201"
+    ],
+    "merged_at": "2026-05-10",
+    "number": 4,
+    "repo": "payments-api",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "payments-api: improve notifier.py (14)"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Routine change.",
+    "created_at": "2026-05-22",
+    "files": [
+      "payments/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "POR-204"
+    ],
+    "merged_at": "2026-05-24",
+    "number": 5,
+    "repo": "payments-api",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "payments-api: improve __init__.py (15)"
+  },
+  {
+    "author": "ines.kowalski",
+    "body": "Routine change.",
+    "created_at": "2026-06-05",
+    "files": [
+      "payments/api.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "POR-205"
+    ],
+    "merged_at": "2026-06-07",
+    "number": 6,
+    "repo": "payments-api",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "payments-api: improve api.py (16)"
+  },
+  {
+    "author": "priya.raman",
+    "body": "Routine change.",
+    "created_at": "2026-06-19",
+    "files": [
+      "payments/ledger_client.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PLT-201"
+    ],
+    "merged_at": "2026-06-21",
+    "number": 7,
+    "repo": "payments-api",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "payments-api: improve ledger_client.py (17)"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Routine change.",
+    "created_at": "2026-07-03",
+    "files": [
+      "payments/notifier.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PLT-204"
+    ],
+    "merged_at": "2026-07-05",
+    "number": 8,
+    "repo": "payments-api",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "payments-api: improve notifier.py (18)"
+  },
+  {
+    "author": "ines.kowalski",
+    "body": "Routine change.",
+    "created_at": "2026-07-17",
+    "files": [
+      "payments/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PLT-205"
+    ],
+    "merged_at": "2026-07-19",
+    "number": 9,
+    "repo": "payments-api",
+    "reviewers": [
+      "priya.raman"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "payments-api: improve __init__.py (19)"
+  },
+  {
+    "author": "priya.raman",
+    "body": "Routine change.",
+    "created_at": "2026-07-31",
+    "files": [
+      "payments/api.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-27"
+    ],
+    "merged_at": "2026-08-02",
+    "number": 10,
+    "repo": "payments-api",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "payments-api: improve api.py (20)"
+  },
+  {
+    "author": "sofia.alvarez",
+    "body": "Routine change.",
+    "created_at": "2026-03-25",
+    "files": [
+      "notify/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "POR-33"
+    ],
+    "merged_at": "2026-03-27",
+    "number": 49,
+    "repo": "notify-svc",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "notify-svc: improve __init__.py (21)"
+  },
+  {
+    "author": "tom.becker",
+    "body": "Routine change.",
+    "created_at": "2026-04-08",
+    "files": [
+      "notify/api.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-19"
+    ],
+    "merged_at": "2026-04-10",
+    "number": 50,
+    "repo": "notify-svc",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "notify-svc: improve api.py (22)"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Routine change.",
+    "created_at": "2026-04-22",
+    "files": [
+      "notify/dedupe.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-98"
+    ],
+    "merged_at": "2026-04-24",
+    "number": 51,
+    "repo": "notify-svc",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "notify-svc: improve dedupe.py (23)"
+  },
+  {
+    "author": "sofia.alvarez",
+    "body": "Routine change.",
+    "created_at": "2026-05-06",
+    "files": [
+      "notify/sender.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PLT-19"
+    ],
+    "merged_at": "2026-05-08",
+    "number": 52,
+    "repo": "notify-svc",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "notify-svc: improve sender.py (24)"
+  },
+  {
+    "author": "tom.becker",
+    "body": "Routine change.",
+    "created_at": "2026-05-20",
+    "files": [
+      "notify/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-201"
+    ],
+    "merged_at": "2026-05-22",
+    "number": 53,
+    "repo": "notify-svc",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "notify-svc: improve __init__.py (25)"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Routine change.",
+    "created_at": "2026-06-03",
+    "files": [
+      "notify/api.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-204"
+    ],
+    "merged_at": "2026-06-05",
+    "number": 54,
+    "repo": "notify-svc",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "notify-svc: improve api.py (26)"
+  },
+  {
+    "author": "sofia.alvarez",
+    "body": "Routine change.",
+    "created_at": "2026-06-17",
+    "files": [
+      "notify/dedupe.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-205"
+    ],
+    "merged_at": "2026-06-19",
+    "number": 55,
+    "repo": "notify-svc",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "notify-svc: improve dedupe.py (27)"
+  },
+  {
+    "author": "tom.becker",
+    "body": "Routine change.",
+    "created_at": "2026-07-01",
+    "files": [
+      "notify/sender.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "LED-201"
+    ],
+    "merged_at": "2026-07-03",
+    "number": 56,
+    "repo": "notify-svc",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "notify-svc: improve sender.py (28)"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Routine change.",
+    "created_at": "2026-07-15",
+    "files": [
+      "notify/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "LED-204"
+    ],
+    "merged_at": "2026-07-17",
+    "number": 57,
+    "repo": "notify-svc",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "notify-svc: improve __init__.py (29)"
+  },
+  {
+    "author": "sofia.alvarez",
+    "body": "Routine change.",
+    "created_at": "2026-07-29",
+    "files": [
+      "notify/api.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "LED-205"
+    ],
+    "merged_at": "2026-07-31",
+    "number": 58,
+    "repo": "notify-svc",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "notify-svc: improve api.py (30)"
+  },
+  {
+    "author": "tom.becker",
+    "body": "Routine change.",
+    "created_at": "2026-03-25",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-201"
+    ],
+    "merged_at": "2026-03-27",
+    "number": 58,
+    "repo": "customer-portal",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "customer-portal: improve __init__.py (31)"
+  },
+  {
+    "author": "sofia.alvarez",
+    "body": "Routine change.",
+    "created_at": "2026-04-08",
+    "files": [
+      "portal/bff.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-204"
+    ],
+    "merged_at": "2026-04-10",
+    "number": 59,
+    "repo": "customer-portal",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "customer-portal: improve bff.py (32)"
+  },
+  {
+    "author": "priya.raman",
+    "body": "Routine change.",
+    "created_at": "2026-04-22",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-205"
+    ],
+    "merged_at": "2026-04-24",
+    "number": 60,
+    "repo": "customer-portal",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "customer-portal: improve __init__.py (33)"
+  },
+  {
+    "author": "tom.becker",
+    "body": "Routine change.",
+    "created_at": "2026-05-06",
+    "files": [
+      "portal/bff.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "POR-201"
+    ],
+    "merged_at": "2026-05-08",
+    "number": 61,
+    "repo": "customer-portal",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "customer-portal: improve bff.py (34)"
+  },
+  {
+    "author": "sofia.alvarez",
+    "body": "Routine change.",
+    "created_at": "2026-05-20",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "POR-204"
+    ],
+    "merged_at": "2026-05-22",
+    "number": 62,
+    "repo": "customer-portal",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "customer-portal: improve __init__.py (35)"
+  },
+  {
+    "author": "priya.raman",
+    "body": "Routine change.",
+    "created_at": "2026-06-03",
+    "files": [
+      "portal/bff.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "POR-205"
+    ],
+    "merged_at": "2026-06-05",
+    "number": 63,
+    "repo": "customer-portal",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "customer-portal: improve bff.py (36)"
+  },
+  {
+    "author": "tom.becker",
+    "body": "Routine change.",
+    "created_at": "2026-06-17",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PLT-201"
+    ],
+    "merged_at": "2026-06-19",
+    "number": 64,
+    "repo": "customer-portal",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "customer-portal: improve __init__.py (37)"
+  },
+  {
+    "author": "sofia.alvarez",
+    "body": "Routine change.",
+    "created_at": "2026-07-01",
+    "files": [
+      "portal/bff.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PLT-204"
+    ],
+    "merged_at": "2026-07-03",
+    "number": 65,
+    "repo": "customer-portal",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "customer-portal: improve bff.py (38)"
+  },
+  {
+    "author": "priya.raman",
+    "body": "Routine change.",
+    "created_at": "2026-07-15",
+    "files": [
+      "portal/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PLT-205"
+    ],
+    "merged_at": "2026-07-17",
+    "number": 66,
+    "repo": "customer-portal",
+    "reviewers": [
+      "tom.becker"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "customer-portal: improve __init__.py (39)"
+  },
+  {
+    "author": "tom.becker",
+    "body": "Routine change.",
+    "created_at": "2026-07-29",
+    "files": [
+      "portal/bff.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-27"
+    ],
+    "merged_at": "2026-07-31",
+    "number": 67,
+    "repo": "customer-portal",
+    "reviewers": [
+      "sofia.alvarez"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "customer-portal: improve bff.py (40)"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Routine change.",
+    "created_at": "2026-03-28",
+    "files": [
+      "platform_libs/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "POR-33"
+    ],
+    "merged_at": "2026-03-30",
+    "number": 23,
+    "repo": "platform-libs",
+    "reviewers": [
+      "ines.kowalski"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "platform-libs: improve __init__.py (41)"
+  },
+  {
+    "author": "ines.kowalski",
+    "body": "Routine change.",
+    "created_at": "2026-04-11",
+    "files": [
+      "platform_libs/http_client.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "NTF-19"
+    ],
+    "merged_at": "2026-04-13",
+    "number": 24,
+    "repo": "platform-libs",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "platform-libs: improve http_client.py (42)"
+  },
+  {
+    "author": "priya.raman",
+    "body": "Routine change.",
+    "created_at": "2026-04-25",
+    "files": [
+      "platform_libs/idempotency.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-98"
+    ],
+    "merged_at": "2026-04-27",
+    "number": 25,
+    "repo": "platform-libs",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "platform-libs: improve idempotency.py (43)"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Routine change.",
+    "created_at": "2026-05-09",
+    "files": [
+      "platform_libs/errors.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PLT-19"
+    ],
+    "merged_at": "2026-05-11",
+    "number": 26,
+    "repo": "platform-libs",
+    "reviewers": [
+      "ines.kowalski"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "platform-libs: improve errors.py (44)"
+  },
+  {
+    "author": "ines.kowalski",
+    "body": "Routine change.",
+    "created_at": "2026-05-23",
+    "files": [
+      "platform_libs/auth.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-201"
+    ],
+    "merged_at": "2026-05-25",
+    "number": 27,
+    "repo": "platform-libs",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "platform-libs: improve auth.py (45)"
+  },
+  {
+    "author": "priya.raman",
+    "body": "Routine change.",
+    "created_at": "2026-06-06",
+    "files": [
+      "platform_libs/__init__.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-204"
+    ],
+    "merged_at": "2026-06-08",
+    "number": 28,
+    "repo": "platform-libs",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "platform-libs: improve __init__.py (46)"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Routine change.",
+    "created_at": "2026-06-20",
+    "files": [
+      "platform_libs/http_client.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "PAY-205"
+    ],
+    "merged_at": "2026-06-22",
+    "number": 29,
+    "repo": "platform-libs",
+    "reviewers": [
+      "ines.kowalski"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "platform-libs: improve http_client.py (47)"
+  },
+  {
+    "author": "ines.kowalski",
+    "body": "Routine change.",
+    "created_at": "2026-07-04",
+    "files": [
+      "platform_libs/idempotency.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "LED-201"
+    ],
+    "merged_at": "2026-07-06",
+    "number": 30,
+    "repo": "platform-libs",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "platform-libs: improve idempotency.py (48)"
+  },
+  {
+    "author": "priya.raman",
+    "body": "Routine change.",
+    "created_at": "2026-07-18",
+    "files": [
+      "platform_libs/errors.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "LED-204"
+    ],
+    "merged_at": "2026-07-20",
+    "number": 31,
+    "repo": "platform-libs",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "platform-libs: improve errors.py (49)"
+  },
+  {
+    "author": "marcus.lee",
+    "body": "Routine change.",
+    "created_at": "2026-08-01",
+    "files": [
+      "platform_libs/auth.py"
+    ],
+    "labels": [],
+    "linked_tickets": [
+      "LED-205"
+    ],
+    "merged_at": "2026-08-03",
+    "number": 32,
+    "repo": "platform-libs",
+    "reviewers": [
+      "ines.kowalski"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "platform-libs: improve auth.py (50)"
+  }
+]

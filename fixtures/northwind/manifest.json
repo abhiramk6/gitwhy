@@ -1,0 +1,75 @@
+{
+  "counts": {
+    "adrs": 8,
+    "commits": 136,
+    "jira_issues": 42,
+    "people": 6,
+    "pull_requests": 55,
+    "repos": 5
+  },
+  "organization": {
+    "is_synthetic": true,
+    "name": "Northwind Labs",
+    "slug": "northwind"
+  },
+  "reference_date": "2026-09-15",
+  "repos": [
+    "customer-portal",
+    "ledger-core",
+    "notify-svc",
+    "payments-api",
+    "platform-libs"
+  ],
+  "scenarios": {
+    "S1_single_owner": {
+      "author": "dana.okafor",
+      "min_share": 0.9,
+      "path": "ledger/reconcile.py",
+      "repo": "ledger-core"
+    },
+    "S2_inactive_owner": {
+      "min_inactive_days": 90,
+      "person": "dana.okafor",
+      "repo": "ledger-core"
+    },
+    "S3_conflicting_conventions": {
+      "adrs": [
+        "ADR-005",
+        "ADR-006"
+      ],
+      "topic": "error-format"
+    },
+    "S4_standard_bypass": {
+      "adr": "ADR-004",
+      "with_override": [
+        "notify-svc#41"
+      ],
+      "without_override": [
+        "customer-portal#57"
+      ]
+    },
+    "S5_multi_service_feature": {
+      "impact": [
+        "customer-portal",
+        "ledger-core",
+        "notify-svc",
+        "payments-api"
+      ],
+      "ticket": "PAY-142"
+    },
+    "S6_reuse_candidate": {
+      "duplicate": "notify-svc:notify/dedupe.py",
+      "existing": "platform-libs:platform_libs/idempotency.py"
+    },
+    "S7_superseded_decision": {
+      "by": "ADR-007",
+      "stale_reference": "payments-api:payments/ledger_client.py",
+      "superseded": "ADR-002"
+    },
+    "S8_migration_risk": {
+      "blocks": "PAY-142",
+      "field": "ledger/models.py:amount_cents",
+      "ticket": "LED-88"
+    }
+  }
+}
