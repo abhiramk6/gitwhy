@@ -68,8 +68,11 @@ class GeminiProvider:
     RETRIES = 1
     REQUEST_TIMEOUT_MS = 45_000  # a request that hangs counts as a failure, not a stall
     COOLDOWN_S = 300.0  # a model that just failed is tried last for this long (circuit breaker)
-    QUOTA_RETRIES = 5
+    QUOTA_RETRIES = 8
     MAX_QUOTA_WAIT_S = 90.0
+    EMBED_REQUEST_CHARS = 30_000   # ~9k tokens
+    EMBED_TOKENS_PER_MIN = 24_000  # under the free-tier 30k/min
+    CHARS_PER_TOKEN = 3.0          # conservative for code
     EMBED_MIN_INTERVAL_S = 0.65  # ~92 requests/minute: under the free-tier cap of 100
     BACKOFF_S = 1.5
 
@@ -119,7 +122,8 @@ class GeminiProvider:
                 if getattr(exc, "code", None) != 429 or attempt >= self.RETRIES + self.QUOTA_RETRIES - 1 \
                         or (delay or 0) > self.MAX_QUOTA_WAIT_S:
                     raise  # a per-day quota (retry in hours) is not worth waiting for: let the caller change model
-                wait = (delay or 30.0) + 1.0
+                # No RetryInfo = a per-minute throttle: back off progressively (45s, 90s, 120s...) until it clears.
+                wait = (delay + 1.0) if delay else min(45.0 * (attempt - self.RETRIES + 1), 120.0)
             self.usage["retries"] += 1
             time.sleep(wait)
         return fn()
@@ -137,6 +141,7 @@ class GeminiProvider:
     def embed(self, texts: list[str], query: bool = False) -> list[list[float]]:
         from google.genai import types
 
+        import time
         from concurrent.futures import ThreadPoolExecutor
 
         cfg = types.EmbedContentConfig(output_dimensionality=EMBED_DIM,
@@ -147,8 +152,8 @@ class GeminiProvider:
                 model=self.embed_model, contents=batch, config=cfg)).embeddings
 
         out: list[list[float]] = []
-        for i in range(0, len(texts), 50):
-            batch = texts[i:i + 50]
+        for batch in self._requests(texts):
+            started = time.monotonic()
             got = one(batch)
             if len(got) != len(batch):
                 # Some embedding models (gemini-embedding-2) fold a batch into ONE vector; embed each text alone so
@@ -160,7 +165,23 @@ class GeminiProvider:
                 with ThreadPoolExecutor(8) as ex:
                     got = list(ex.map(alone, batch))
             out.extend(_unit(e.values) for e in got)
+            # Free-tier embedding quota is also per-minute TOKENS: keep the sustained rate under it.
+            est_tokens = sum(len(t) for t in batch) / self.CHARS_PER_TOKEN
+            time.sleep(max(0.0, est_tokens / self.EMBED_TOKENS_PER_MIN * 60.0 - (time.monotonic() - started)))
         return out
+
+    def _requests(self, texts: list[str]):
+        """Split into requests of at most 50 texts and EMBED_REQUEST_CHARS characters: a single oversized request
+        is rejected (429) however long we wait, so size is bounded up front instead of retried."""
+        cur, size = [], 0
+        for t in texts:
+            if cur and (len(cur) >= 50 or size + len(t) > self.EMBED_REQUEST_CHARS):
+                yield cur
+                cur, size = [], 0
+            cur.append(t)
+            size += len(t)
+        if cur:
+            yield cur
 
     def generate_json(self, system: str, user: str, schema: dict) -> dict:
         from google.genai import errors, types

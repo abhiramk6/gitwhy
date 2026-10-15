@@ -52,4 +52,5 @@ def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider) -> dict
                 "ON CONFLICT (owner_table, owner_id, model, chunk_index) DO UPDATE SET content_hash=EXCLUDED.content_hash,"
                 " chunk_start=EXCLUDED.chunk_start, chunk_end=EXCLUDED.chunk_end, embedding=EXCLUDED.embedding",
                 (org_id, t, i, c, s, e, h, provider.embed_model, _vec(vec)))
+        conn.commit()  # progress survives an interrupted run; unchanged chunks are skipped on the next one
     return {"candidates": len(want), "embedded": len(todo), "cached": len(want) - len(todo), "removed": len(stale)}
