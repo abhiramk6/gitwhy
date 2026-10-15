@@ -6,14 +6,16 @@ Updated: 2026-10-15
 - Plan cleaned (docs/PLAN.md); decisions D1-D10 logged (docs/decisions.md) incl. LORE audit.
 - Toolchain installed: Postgres 16 + pgvector 0.6.0, Node 18, gcloud, gh, tmux, Python venv (backend/.venv).
 - Stage 0 foundation: migrations/001_init.sql, FastAPI /health + /health/db, 5 passing tests (idempotent migrations).
+- Stage 1 synthetic org: scripts/generate_synthetic_org.py + validate_synthetic_org.py; fixtures/northwind committed;
+  5 repos, 42 Jira, 55 PRs, 136 commits, 8 ADRs; all 8 scenarios validated from data; 10 tests pass.
 - Telegram: group "Cb" paired; tmux session `lore` (agent + bridge + shell).
 
 ## Blocked on owner (via Telegram)
 - Rotate bot token; GitHub login (private repo); GCP free-trial + gcloud login; collaborator usernames.
 
 ## Next
-- Stage 1: synthetic org generator + deterministic validator (5 repos, ~40 tickets, ~60 PRs, 6 ADRs, 8 scenarios).
-- Stage 2: idempotent ingestion + cursors (local), then Stage 3 graph.
+- Stage 2: idempotent fixture ingestion + cursors + run records (local); no-duplicate-growth test.
+- Stage 3: AST structure parse -> entities/edges/facts; impact traversal with evidence.
 
 ## Local run
 - `set -a; source ~/.config/lore/db.env; set +a; cd backend; .venv/bin/python -m pytest -q`
