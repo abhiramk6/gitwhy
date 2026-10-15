@@ -38,6 +38,7 @@ def main() -> int:
         lines += ["## Retrieval", "", "| Query | Expectation | Result | Rank |", "|---|---|---|---|"]
         rr, hits_at_k, pos = [], 0, 0
         for c in cases["retrieval"]:
+            print(f"retrieval: {c['q']}", file=sys.stderr, flush=True)
             hits = search(conn, org, prov, c["q"], k=c.get("k", 5))
             ids = [h.source_id for h in hits]
             if c.get("expect_none") and c.get("needs_semantic_provider") and prov.name.startswith("offline"):
@@ -63,6 +64,7 @@ def main() -> int:
         lines += ["## Planning", "", "| Case | Check | Result |", "|---|---|---|"]
         total_claims = unsupported = 0
         for c in cases["plans"]:
+            print(f"plan: {c['name']}", file=sys.stderr, flush=True)
             plan = create_plan(conn, org, prov, c["request"], persist=False)
             if plan.get("status") == "llm_required":
                 lines.append(f"| {c['request'][:60]} | plan | SKIPPED: planning needs an LLM provider "
@@ -94,10 +96,13 @@ def main() -> int:
         rate = unsupported / total_claims if total_claims else 0.0
         lines += ["", f"- unsupported-claim rate: **{rate:.1%}** ({unsupported}/{total_claims} claims)", ""]
 
+    usage = getattr(prov, "usage", None)
     header = ["# Evaluation report", "",
               f"Provider: `{prov.name}` · Organization: synthetic Northwind Labs · Result: "
               f"**{'ALL PASS' if failures == 0 else str(failures) + ' FAILURE(S)'}**", "",
               "Baselines are measured on the synthetic dataset only; they are not claims about real organizations.", ""]
+    if usage:
+        header += [f"Model usage this run: {usage}; models answered: {getattr(prov, 'last_model', '?')}", ""]
     Path(args.out).write_text("\n".join(header + lines) + "\n")
     print("\n".join(header + lines))
     return 1 if failures else 0

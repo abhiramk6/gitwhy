@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 import re
+import threading
 from typing import Protocol
 
 EMBED_DIM = 768
@@ -64,7 +65,12 @@ class GeminiProvider:
     `models` is the full chain so cached judgments from any of them are reusable."""
     has_llm = True
     semantic_embeddings = True
-    RETRIES = 2
+    RETRIES = 1
+    REQUEST_TIMEOUT_MS = 45_000  # a request that hangs counts as a failure, not a stall
+    COOLDOWN_S = 300.0  # a model that just failed is tried last for this long (circuit breaker)
+    QUOTA_RETRIES = 5
+    MAX_QUOTA_WAIT_S = 90.0
+    EMBED_MIN_INTERVAL_S = 0.65  # ~92 requests/minute: under the free-tier cap of 100
     BACKOFF_S = 1.5
 
     def __init__(self, *, api_key: str = "", project: str = "", location: str = "us-central1",
@@ -72,31 +78,61 @@ class GeminiProvider:
                  fallback_models: tuple[str, ...] = ()):
         from google import genai  # lazy: only needed when a model is configured
 
+        from google.genai import types
+
+        http = types.HttpOptions(timeout=self.REQUEST_TIMEOUT_MS)
         if api_key:
-            self._client, self.name = genai.Client(api_key=api_key), "gemini-api"
+            self._client, self.name = genai.Client(api_key=api_key, http_options=http), "gemini-api"
         else:
-            self._client, self.name = genai.Client(vertexai=True, project=project, location=location), "vertex-gemini"
+            self._client, self.name = genai.Client(vertexai=True, project=project, location=location,
+                                                   http_options=http), "vertex-gemini"
         self._gen_model, self.embed_model = gen_model, embed_model
         self.models = [gen_model, *[m for m in fallback_models if m and m != gen_model]]
         self.last_model = gen_model
+        self._pace_lock, self._next_slot = threading.Lock(), 0.0
+        self._down_until: dict[str, float] = {}
         self.usage = {"calls": 0, "prompt_tokens": 0, "output_tokens": 0, "retries": 0, "fallbacks": 0}
 
+    @staticmethod
+    def _retry_delay(exc) -> float | None:
+        """Seconds the API asked us to wait (google.rpc.RetryInfo, e.g. '58s'), if present."""
+        import re
+
+        m = re.search(r"'retryDelay': '([\d.]+)s'", str(exc))
+        return float(m.group(1)) if m else None
+
     def _call(self, fn):
+        """Retry transient failures: 5xx with short backoff, 429 (free-tier quota) after the delay the API names."""
         import time
 
         from google.genai import errors
 
-        for attempt in range(self.RETRIES):
+        for attempt in range(self.RETRIES + self.QUOTA_RETRIES):
             try:
                 return fn()
             except errors.ServerError:
-                pass
-            except errors.ClientError as exc:
-                if getattr(exc, "code", None) != 429:
+                if attempt >= self.RETRIES:
                     raise
+                wait = self.BACKOFF_S * (attempt + 1)
+            except errors.ClientError as exc:
+                delay = self._retry_delay(exc)
+                if getattr(exc, "code", None) != 429 or attempt >= self.RETRIES + self.QUOTA_RETRIES - 1 \
+                        or (delay or 0) > self.MAX_QUOTA_WAIT_S:
+                    raise  # a per-day quota (retry in hours) is not worth waiting for: let the caller change model
+                wait = (delay or 30.0) + 1.0
             self.usage["retries"] += 1
-            time.sleep(self.BACKOFF_S * (attempt + 1))
+            time.sleep(wait)
         return fn()
+
+    def _pace(self) -> None:
+        """Global spacing between per-text embedding requests so the free-tier requests/minute cap is not hit."""
+        import time
+
+        with self._pace_lock:
+            wait = self._next_slot - time.monotonic()
+            self._next_slot = max(self._next_slot, time.monotonic()) + self.EMBED_MIN_INTERVAL_S
+        if wait > 0:
+            time.sleep(wait)
 
     def embed(self, texts: list[str], query: bool = False) -> list[list[float]]:
         from google.genai import types
@@ -117,8 +153,12 @@ class GeminiProvider:
             if len(got) != len(batch):
                 # Some embedding models (gemini-embedding-2) fold a batch into ONE vector; embed each text alone so
                 # vectors stay aligned with their chunks instead of silently shifting.
+                def alone(t: str):
+                    self._pace()
+                    return one([t])[0]
+
                 with ThreadPoolExecutor(8) as ex:
-                    got = [e[0] for e in ex.map(lambda t: one([t]), batch)]
+                    got = list(ex.map(alone, batch))
             out.extend(_unit(e.values) for e in got)
         return out
 
@@ -127,8 +167,14 @@ class GeminiProvider:
 
         cfg = types.GenerateContentConfig(system_instruction=system, response_mime_type="application/json",
                                           response_schema=schema, temperature=0.0)
+        import time
+
+        import httpx
+
         last: Exception | None = None
-        for n, model in enumerate(self.models):
+        now = time.monotonic()
+        order = sorted(self.models, key=lambda m: self._down_until.get(m, 0.0) > now)  # healthy first, stable
+        for n, model in enumerate(order):
             for _ in range(2):  # one retry: structured output occasionally fails to parse
                 try:
                     r = self._call(lambda: self._client.models.generate_content(model=model, contents=user, config=cfg))
@@ -136,15 +182,17 @@ class GeminiProvider:
                 except (json.JSONDecodeError, ValueError, TypeError) as exc:
                     last = exc
                     continue
-                except (errors.ServerError, errors.ClientError) as exc:
+                except (errors.APIError, httpx.HTTPError) as exc:
                     last = exc
-                    break  # unavailable / retired: next model in the chain
+                    self._down_until[model] = time.monotonic() + min(max(self._retry_delay(exc) or 0.0, self.COOLDOWN_S), 21600.0)
+                    break  # unavailable / retired / hung: next model in the chain
                 u = getattr(r, "usage_metadata", None)
                 self.usage["calls"] += 1
                 self.usage["prompt_tokens"] += getattr(u, "prompt_token_count", 0) or 0
                 self.usage["output_tokens"] += getattr(u, "candidates_token_count", 0) or 0
-                self.usage["fallbacks"] += 1 if n else 0
+                self.usage["fallbacks"] += 1 if model != self._gen_model else 0
                 self.last_model = model
+                self._down_until.pop(model, None)
                 return out
         raise RuntimeError(f"no model produced a valid answer: {type(last).__name__}: {str(last)[:200]}")
 

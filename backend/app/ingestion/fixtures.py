@@ -105,6 +105,26 @@ def iter_records(root: Path) -> Iterator[Rec]:
                       {"path": rel, "overlay": True}, f"overlay://{label}/{rel}")
 
 
+def upsert_record(conn: psycopg.Connection, org_id: int, repo_id: int | None, rec: Rec) -> str:
+    """Insert or update one source record by (organization, source_type, source_id). Returns new|changed|unchanged;
+    unchanged content (same hash) is not rewritten."""
+    h = _h(rec.title, rec.body, json.dumps(rec.payload, sort_keys=True))
+    row = conn.execute(
+        "INSERT INTO source_records (organization_id, repository_id, source_type, source_id, source_url,"
+        " title, body, payload, content_hash) VALUES (%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s) "
+        "ON CONFLICT (organization_id, source_type, source_id) DO UPDATE SET "
+        " title=EXCLUDED.title, body=EXCLUDED.body, payload=EXCLUDED.payload, "
+        " content_hash=EXCLUDED.content_hash, source_url=EXCLUDED.source_url, "
+        " updated_at=now(), observed_at=now() "
+        "WHERE source_records.content_hash <> EXCLUDED.content_hash "
+        "RETURNING (xmax = 0) AS inserted",
+        (org_id, repo_id, rec.source_type, rec.source_id, rec.url, rec.title,
+         rec.body, json.dumps(rec.payload), h)).fetchone()
+    if row is None:
+        return "unchanged"
+    return "new" if row["inserted"] else "changed"
+
+
 def ingest(conn: psycopg.Connection, root: Path, mode: str = "backfill") -> tuple[int, Stats]:
     assert mode in ("backfill", "incremental")
     manifest = json.loads((root / "manifest.json").read_text())
@@ -139,24 +159,8 @@ def ingest(conn: psycopg.Connection, root: Path, mode: str = "backfill") -> tupl
             st.by_type[rec.source_type] = st.by_type.get(rec.source_type, 0) + 1
             if rec.when and rec.when > newest:
                 newest = rec.when
-            h = _h(rec.title, rec.body, json.dumps(rec.payload, sort_keys=True))
-            row = conn.execute(
-                "INSERT INTO source_records (organization_id, repository_id, source_type, source_id, source_url,"
-                " title, body, payload, content_hash) VALUES (%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s) "
-                "ON CONFLICT (organization_id, source_type, source_id) DO UPDATE SET "
-                " title=EXCLUDED.title, body=EXCLUDED.body, payload=EXCLUDED.payload, "
-                " content_hash=EXCLUDED.content_hash, source_url=EXCLUDED.source_url, "
-                " updated_at=now(), observed_at=now() "
-                "WHERE source_records.content_hash <> EXCLUDED.content_hash "
-                "RETURNING (xmax = 0) AS inserted",
-                (org_id, repo_ids.get(rec.repo), rec.source_type, rec.source_id, rec.url, rec.title,
-                 rec.body, json.dumps(rec.payload), h)).fetchone()
-            if row is None:
-                st.unchanged += 1
-            elif row["inserted"]:
-                st.new += 1
-            else:
-                st.changed += 1
+            outcome = upsert_record(conn, org_id, repo_ids.get(rec.repo), rec)
+            setattr(st, outcome, getattr(st, outcome) + 1)
         if mode == "backfill":
             # A full backfill is authoritative for file-like sources: drop records whose source no longer exists
             # (deleted/renamed files, re-chunked docs) together with their embeddings.
