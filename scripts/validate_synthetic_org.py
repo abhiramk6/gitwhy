@@ -137,7 +137,7 @@ def validate(root: Path) -> list[str]:
             continue
         touched = [root / "repos" / repo / f for f in pr["files"]]
         raw = any("requests" in py_imports(f) for f in touched if f.suffix == ".py")
-        check(raw, f"S4: {ref_id} does not introduce raw `requests`")
+        check(raw and "requests" in pr.get("adds_imports", []), f"S4: {ref_id} does not introduce raw `requests`")
         has = bool(re.search(r"^Override:\s*ADR-004\b.*reason=", pr["body"], re.M))
         check(has == want_override, f"S4: {ref_id} override-present={has}, expected {want_override}")
 

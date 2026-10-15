@@ -8,14 +8,17 @@ Updated: 2026-10-15
 - Stage 0 foundation: migrations/001_init.sql, FastAPI /health + /health/db, 5 passing tests (idempotent migrations).
 - Stage 1 synthetic org: scripts/generate_synthetic_org.py + validate_synthetic_org.py; fixtures/northwind committed;
   5 repos, 42 Jira, 55 PRs, 136 commits, 8 ADRs; all 8 scenarios validated from data; 10 tests pass.
+- Stage 2 ingestion: app/ingestion (idempotent, cursors, runs); rerun = 0 new.
+- Stage 3 graph: app/knowledge/build_graph.py (entities/edges/facts w/ provenance + evidence_type, stale-fact retirement),
+  app/graph/impact.py (bounded recursive-CTE traversal). 21 tests pass. PR bypass uses diff-derived `adds_imports`.
 - Telegram: group "Cb" paired; tmux session `lore` (agent + bridge + shell).
 
 ## Blocked on owner (via Telegram)
 - Rotate bot token; GitHub login (private repo); GCP free-trial + gcloud login; collaborator usernames.
 
 ## Next
-- Stage 2: idempotent fixture ingestion + cursors + run records (local); no-duplicate-growth test.
-- Stage 3: AST structure parse -> entities/edges/facts; impact traversal with evidence.
+- Stage 4: provider adapter (offline deterministic + Vertex), hybrid retrieval (FTS+pgvector+graph, RRF), planner, eval set.
+- Stage 5: API routes for dashboard + MCP route; 4-screen React UI.
 
 ## Local run
 - `set -a; source ~/.config/lore/db.env; set +a; cd backend; .venv/bin/python -m pytest -q`

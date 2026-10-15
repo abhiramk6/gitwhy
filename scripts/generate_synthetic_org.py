@@ -460,12 +460,13 @@ def build_prs(jira: list[dict]) -> list[dict]:
     prs: list[dict] = []
     counters: dict[str, int] = {}
 
-    def add(repo, number, title, author, merged, files, body="", tickets=None, reviewers=None, labels=None):
+    def add(repo, number, title, author, merged, files, body="", tickets=None, reviewers=None, labels=None,
+            adds_imports=None):
         prs.append({"repo": repo, "number": number, "title": title, "author": author,
                     "reviewers": reviewers or [p for p in REPO_TEAM_POOL[repo] if p != author][:1],
                     "state": "merged", "created_at": d(merged - timedelta(days=2)), "merged_at": d(merged),
                     "files": files, "body": body, "linked_tickets": tickets or [], "labels": labels or [],
-                    "synthetic": True})
+                    "adds_imports": adds_imports or [], "synthetic": True})
         counters[repo] = max(counters.get(repo, 0), number)
 
     # handcrafted scenario PRs (S4, S6)
@@ -473,9 +474,10 @@ def build_prs(jira: list[dict]) -> list[dict]:
         ["notify/sender.py"],
         "Provider needs a 30s timeout; http_client caps at 5s.\n\nOverride: ADR-004 reason=provider batch endpoint "
         "needs 30s timeout; temporary until http_client supports per-call timeouts; approved-by=ines.kowalski",
-        ["PLT-12"], ["ines.kowalski"], ["override"])
+        ["PLT-12"], ["ines.kowalski"], ["override"], adds_imports=["requests"])
     add("customer-portal", 57, "Call payments-api capture from BFF", "tom.becker", date(2026, 7, 8),
-        ["portal/bff.py"], "Adds capture endpoint to BFF using requests.", ["POR-41"], ["sofia.alvarez"])
+        ["portal/bff.py"], "Adds capture endpoint to BFF using requests.", ["POR-41"], ["sofia.alvarez"],
+        adds_imports=["requests"])
     add("notify-svc", 48, "Add own de-dupe store for notifications", "sofia.alvarez", date(2026, 6, 10),
         ["notify/dedupe.py", "notify/api.py"], "Avoid duplicate sends.", ["NTF-27"], ["tom.becker"])
     add("platform-libs", 22, "Add IdempotencyStore", "marcus.lee", date(2026, 4, 9),

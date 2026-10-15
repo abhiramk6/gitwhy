@@ -1,5 +1,8 @@
 [
   {
+    "adds_imports": [
+      "requests"
+    ],
     "author": "sofia.alvarez",
     "body": "Provider needs a 30s timeout; http_client caps at 5s.\n\nOverride: ADR-004 reason=provider batch endpoint needs 30s timeout; temporary until http_client supports per-call timeouts; approved-by=ines.kowalski",
     "created_at": "2026-05-12",
@@ -23,6 +26,9 @@
     "title": "Send via provider SDK with longer timeout"
   },
   {
+    "adds_imports": [
+      "requests"
+    ],
     "author": "tom.becker",
     "body": "Adds capture endpoint to BFF using requests.",
     "created_at": "2026-07-06",
@@ -44,6 +50,7 @@
     "title": "Call payments-api capture from BFF"
   },
   {
+    "adds_imports": [],
     "author": "sofia.alvarez",
     "body": "Avoid duplicate sends.",
     "created_at": "2026-06-08",
@@ -66,6 +73,7 @@
     "title": "Add own de-dupe store for notifications"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Shared idempotency primitive for mutating endpoints.",
     "created_at": "2026-04-07",
@@ -85,6 +93,7 @@
     "title": "Add IdempotencyStore"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Partial work; see LED-71.",
     "created_at": "2026-04-16",
@@ -106,6 +115,7 @@
     "title": "Reconcile: stream settlement file"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Routine change.",
     "created_at": "2026-03-18",
@@ -127,6 +137,7 @@
     "title": "ledger-core: improve reconcile.py (1)"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Routine change.",
     "created_at": "2026-03-21",
@@ -148,6 +159,7 @@
     "title": "ledger-core: improve models.py (2)"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Routine change.",
     "created_at": "2026-03-24",
@@ -169,6 +181,7 @@
     "title": "ledger-core: improve reconcile.py (3)"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Routine change.",
     "created_at": "2026-03-27",
@@ -190,6 +203,7 @@
     "title": "ledger-core: improve reconcile.py (4)"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Routine change.",
     "created_at": "2026-03-30",
@@ -211,6 +225,7 @@
     "title": "ledger-core: improve reconcile.py (5)"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Routine change.",
     "created_at": "2026-04-02",
@@ -232,6 +247,7 @@
     "title": "ledger-core: improve __init__.py (6)"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Routine change.",
     "created_at": "2026-04-05",
@@ -253,6 +269,7 @@
     "title": "ledger-core: improve reconcile.py (7)"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Routine change.",
     "created_at": "2026-04-08",
@@ -274,6 +291,7 @@
     "title": "ledger-core: improve entries.py (8)"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Routine change.",
     "created_at": "2026-04-11",
@@ -295,6 +313,7 @@
     "title": "ledger-core: improve reconcile.py (9)"
   },
   {
+    "adds_imports": [],
     "author": "dana.okafor",
     "body": "Routine change.",
     "created_at": "2026-04-14",
@@ -316,6 +335,7 @@
     "title": "ledger-core: improve api.py (10)"
   },
   {
+    "adds_imports": [],
     "author": "priya.raman",
     "body": "Routine change.",
     "created_at": "2026-03-27",
@@ -337,6 +357,7 @@
     "title": "payments-api: improve __init__.py (11)"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Routine change.",
     "created_at": "2026-04-10",
@@ -358,6 +379,7 @@
     "title": "payments-api: improve api.py (12)"
   },
   {
+    "adds_imports": [],
     "author": "ines.kowalski",
     "body": "Routine change.",
     "created_at": "2026-04-24",
@@ -379,6 +401,7 @@
     "title": "payments-api: improve ledger_client.py (13)"
   },
   {
+    "adds_imports": [],
     "author": "priya.raman",
     "body": "Routine change.",
     "created_at": "2026-05-08",
@@ -400,6 +423,7 @@
     "title": "payments-api: improve notifier.py (14)"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Routine change.",
     "created_at": "2026-05-22",
@@ -421,6 +445,7 @@
     "title": "payments-api: improve __init__.py (15)"
   },
   {
+    "adds_imports": [],
     "author": "ines.kowalski",
     "body": "Routine change.",
     "created_at": "2026-06-05",
@@ -442,6 +467,7 @@
     "title": "payments-api: improve api.py (16)"
   },
   {
+    "adds_imports": [],
     "author": "priya.raman",
     "body": "Routine change.",
     "created_at": "2026-06-19",
@@ -463,6 +489,7 @@
     "title": "payments-api: improve ledger_client.py (17)"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Routine change.",
     "created_at": "2026-07-03",
@@ -484,6 +511,7 @@
     "title": "payments-api: improve notifier.py (18)"
   },
   {
+    "adds_imports": [],
     "author": "ines.kowalski",
     "body": "Routine change.",
     "created_at": "2026-07-17",
@@ -505,6 +533,7 @@
     "title": "payments-api: improve __init__.py (19)"
   },
   {
+    "adds_imports": [],
     "author": "priya.raman",
     "body": "Routine change.",
     "created_at": "2026-07-31",
@@ -526,6 +555,7 @@
     "title": "payments-api: improve api.py (20)"
   },
   {
+    "adds_imports": [],
     "author": "sofia.alvarez",
     "body": "Routine change.",
     "created_at": "2026-03-25",
@@ -547,6 +577,7 @@
     "title": "notify-svc: improve __init__.py (21)"
   },
   {
+    "adds_imports": [],
     "author": "tom.becker",
     "body": "Routine change.",
     "created_at": "2026-04-08",
@@ -568,6 +599,7 @@
     "title": "notify-svc: improve api.py (22)"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Routine change.",
     "created_at": "2026-04-22",
@@ -589,6 +621,7 @@
     "title": "notify-svc: improve dedupe.py (23)"
   },
   {
+    "adds_imports": [],
     "author": "sofia.alvarez",
     "body": "Routine change.",
     "created_at": "2026-05-06",
@@ -610,6 +643,7 @@
     "title": "notify-svc: improve sender.py (24)"
   },
   {
+    "adds_imports": [],
     "author": "tom.becker",
     "body": "Routine change.",
     "created_at": "2026-05-20",
@@ -631,6 +665,7 @@
     "title": "notify-svc: improve __init__.py (25)"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Routine change.",
     "created_at": "2026-06-03",
@@ -652,6 +687,7 @@
     "title": "notify-svc: improve api.py (26)"
   },
   {
+    "adds_imports": [],
     "author": "sofia.alvarez",
     "body": "Routine change.",
     "created_at": "2026-06-17",
@@ -673,6 +709,7 @@
     "title": "notify-svc: improve dedupe.py (27)"
   },
   {
+    "adds_imports": [],
     "author": "tom.becker",
     "body": "Routine change.",
     "created_at": "2026-07-01",
@@ -694,6 +731,7 @@
     "title": "notify-svc: improve sender.py (28)"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Routine change.",
     "created_at": "2026-07-15",
@@ -715,6 +753,7 @@
     "title": "notify-svc: improve __init__.py (29)"
   },
   {
+    "adds_imports": [],
     "author": "sofia.alvarez",
     "body": "Routine change.",
     "created_at": "2026-07-29",
@@ -736,6 +775,7 @@
     "title": "notify-svc: improve api.py (30)"
   },
   {
+    "adds_imports": [],
     "author": "tom.becker",
     "body": "Routine change.",
     "created_at": "2026-03-25",
@@ -757,6 +797,7 @@
     "title": "customer-portal: improve __init__.py (31)"
   },
   {
+    "adds_imports": [],
     "author": "sofia.alvarez",
     "body": "Routine change.",
     "created_at": "2026-04-08",
@@ -778,6 +819,7 @@
     "title": "customer-portal: improve bff.py (32)"
   },
   {
+    "adds_imports": [],
     "author": "priya.raman",
     "body": "Routine change.",
     "created_at": "2026-04-22",
@@ -799,6 +841,7 @@
     "title": "customer-portal: improve __init__.py (33)"
   },
   {
+    "adds_imports": [],
     "author": "tom.becker",
     "body": "Routine change.",
     "created_at": "2026-05-06",
@@ -820,6 +863,7 @@
     "title": "customer-portal: improve bff.py (34)"
   },
   {
+    "adds_imports": [],
     "author": "sofia.alvarez",
     "body": "Routine change.",
     "created_at": "2026-05-20",
@@ -841,6 +885,7 @@
     "title": "customer-portal: improve __init__.py (35)"
   },
   {
+    "adds_imports": [],
     "author": "priya.raman",
     "body": "Routine change.",
     "created_at": "2026-06-03",
@@ -862,6 +907,7 @@
     "title": "customer-portal: improve bff.py (36)"
   },
   {
+    "adds_imports": [],
     "author": "tom.becker",
     "body": "Routine change.",
     "created_at": "2026-06-17",
@@ -883,6 +929,7 @@
     "title": "customer-portal: improve __init__.py (37)"
   },
   {
+    "adds_imports": [],
     "author": "sofia.alvarez",
     "body": "Routine change.",
     "created_at": "2026-07-01",
@@ -904,6 +951,7 @@
     "title": "customer-portal: improve bff.py (38)"
   },
   {
+    "adds_imports": [],
     "author": "priya.raman",
     "body": "Routine change.",
     "created_at": "2026-07-15",
@@ -925,6 +973,7 @@
     "title": "customer-portal: improve __init__.py (39)"
   },
   {
+    "adds_imports": [],
     "author": "tom.becker",
     "body": "Routine change.",
     "created_at": "2026-07-29",
@@ -946,6 +995,7 @@
     "title": "customer-portal: improve bff.py (40)"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Routine change.",
     "created_at": "2026-03-28",
@@ -967,6 +1017,7 @@
     "title": "platform-libs: improve __init__.py (41)"
   },
   {
+    "adds_imports": [],
     "author": "ines.kowalski",
     "body": "Routine change.",
     "created_at": "2026-04-11",
@@ -988,6 +1039,7 @@
     "title": "platform-libs: improve http_client.py (42)"
   },
   {
+    "adds_imports": [],
     "author": "priya.raman",
     "body": "Routine change.",
     "created_at": "2026-04-25",
@@ -1009,6 +1061,7 @@
     "title": "platform-libs: improve idempotency.py (43)"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Routine change.",
     "created_at": "2026-05-09",
@@ -1030,6 +1083,7 @@
     "title": "platform-libs: improve errors.py (44)"
   },
   {
+    "adds_imports": [],
     "author": "ines.kowalski",
     "body": "Routine change.",
     "created_at": "2026-05-23",
@@ -1051,6 +1105,7 @@
     "title": "platform-libs: improve auth.py (45)"
   },
   {
+    "adds_imports": [],
     "author": "priya.raman",
     "body": "Routine change.",
     "created_at": "2026-06-06",
@@ -1072,6 +1127,7 @@
     "title": "platform-libs: improve __init__.py (46)"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Routine change.",
     "created_at": "2026-06-20",
@@ -1093,6 +1149,7 @@
     "title": "platform-libs: improve http_client.py (47)"
   },
   {
+    "adds_imports": [],
     "author": "ines.kowalski",
     "body": "Routine change.",
     "created_at": "2026-07-04",
@@ -1114,6 +1171,7 @@
     "title": "platform-libs: improve idempotency.py (48)"
   },
   {
+    "adds_imports": [],
     "author": "priya.raman",
     "body": "Routine change.",
     "created_at": "2026-07-18",
@@ -1135,6 +1193,7 @@
     "title": "platform-libs: improve errors.py (49)"
   },
   {
+    "adds_imports": [],
     "author": "marcus.lee",
     "body": "Routine change.",
     "created_at": "2026-08-01",
