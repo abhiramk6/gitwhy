@@ -86,7 +86,7 @@ class GeminiProvider:
 
     def __init__(self, *, api_key: str = "", project: str = "", location: str = "us-central1",
                  gen_model: str = "gemini-3.5-flash", embed_model: str = "gemini-embedding-001",
-                 fallback_models: tuple[str, ...] = ()):
+                 fallback_models: tuple[str, ...] = (), backup_api_key: str = "", backup_for_index: bool = False):
         from google import genai  # lazy: only needed when a model is configured
 
         from google.genai import types
@@ -102,7 +102,23 @@ class GeminiProvider:
         self.last_model = gen_model
         self._pace_lock, self._next_slot = threading.Lock(), 0.0
         self._down_until: dict[str, float] = {}
-        self.usage = {"calls": 0, "prompt_tokens": 0, "output_tokens": 0, "retries": 0, "fallbacks": 0}
+        self.usage = {"calls": 0, "prompt_tokens": 0, "output_tokens": 0, "retries": 0, "fallbacks": 0,
+                      "backup_calls": 0}
+        # A second API key (another project = its own free-tier quota), used only when the primary cannot answer.
+        # Index embeddings stay on the primary unless `backup_for_index` is set by the owner.
+        self._backup = None
+        self.backup_for_index = backup_for_index
+        if backup_api_key and api_key and backup_api_key != api_key:
+            self._backup = GeminiProvider(api_key=backup_api_key, gen_model=gen_model, embed_model=embed_model,
+                                          fallback_models=fallback_models)
+
+    def _via_backup(self, fn):
+        before = dict(self._backup.usage)
+        out = fn()
+        for k in ("calls", "prompt_tokens", "output_tokens", "retries", "fallbacks"):
+            self.usage[k] += self._backup.usage[k] - before[k]
+        self.usage["backup_calls"] += 1
+        return out
 
     @staticmethod
     def _retry_delay(exc) -> float | None:
@@ -148,6 +164,24 @@ class GeminiProvider:
             time.sleep(wait)
 
     def embed(self, texts: list[str], query: bool = False) -> list[list[float]]:
+        try:
+            return self._embed_once(texts, query)
+        except QuotaExhausted:
+            if self._backup is not None and (query or self.backup_for_index):
+                return self._via_backup(lambda: self._backup._embed_once(texts, query))
+            raise
+
+    def generate_json(self, system: str, user: str, schema: dict) -> dict:
+        try:
+            return self._generate_json_once(system, user, schema)
+        except RuntimeError:
+            if self._backup is None:
+                raise
+            out = self._via_backup(lambda: self._backup._generate_json_once(system, user, schema))
+            self.last_model = self._backup.last_model
+            return out
+
+    def _embed_once(self, texts: list[str], query: bool = False) -> list[list[float]]:
         from google.genai import types
 
         import time
@@ -192,7 +226,7 @@ class GeminiProvider:
         if cur:
             yield cur
 
-    def generate_json(self, system: str, user: str, schema: dict) -> dict:
+    def _generate_json_once(self, system: str, user: str, schema: dict) -> dict:
         from google.genai import errors, types
 
         cfg = types.GenerateContentConfig(system_instruction=system, response_mime_type="application/json",
@@ -238,5 +272,7 @@ def make_provider(settings) -> Provider:
         return GeminiProvider(api_key=settings.gemini_api_key if settings.provider == "gemini" else "",
                               project=settings.gcp_project, location=settings.gcp_location,
                               gen_model=settings.gen_model, embed_model=settings.embed_model,
-                              fallback_models=tuple(m for m in settings.gen_fallback_models.split(',') if m.strip()))
+                              fallback_models=tuple(m for m in settings.gen_fallback_models.split(',') if m.strip()),
+                              backup_api_key=settings.gemini_api_key_backup if settings.provider == "gemini" else "",
+                              backup_for_index=settings.embed_backup_for_index)
     return OfflineProvider()

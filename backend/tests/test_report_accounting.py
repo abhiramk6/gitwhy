@@ -159,3 +159,38 @@ def test_dev_scoring_buckets_decisions_risks_and_reuse():
     assert r["decisions_unlisted"] == ["ADR-101"]
     assert r["risks_ok"] == 1 and len(r["risks_excluded"]) == 1 and len(r["risks_unlisted"]) == 1
     assert r["reuse_ok"] == 1 and len(r["reuse_unlisted"]) == 1 and r["fail"] is True
+
+
+def test_backup_key_is_used_for_queries_but_not_for_index_unless_allowed():
+    from app.models.provider import GeminiProvider, QuotaExhausted
+
+    class Fake:
+        def __init__(self, fail):
+            self.fail, self.calls, self.usage = fail, 0, {"calls": 0, "prompt_tokens": 0, "output_tokens": 0,
+                                                          "retries": 0, "fallbacks": 0}
+            self.last_model = "m"
+
+        def _embed_once(self, texts, query=False):
+            self.calls += 1
+            if self.fail:
+                raise QuotaExhausted("cap", 100)
+            return [[1.0] + [0.0] * 767 for _ in texts]
+
+        def _generate_json_once(self, s, u, sch):
+            self.calls += 1
+            if self.fail:
+                raise RuntimeError("no model produced a valid answer")
+            return {"ok": True}
+
+    g = GeminiProvider.__new__(GeminiProvider)
+    g.usage = {"calls": 0, "prompt_tokens": 0, "output_tokens": 0, "retries": 0, "fallbacks": 0, "backup_calls": 0}
+    g.last_model, g.backup_for_index = "m", False
+    primary, backup = Fake(True), Fake(False)
+    g._embed_once, g._generate_json_once, g._backup = primary._embed_once, primary._generate_json_once, backup
+    assert g.embed(["q"], query=True) and backup.calls == 1             # query embedding falls back
+    with pytest.raises(QuotaExhausted):
+        g.embed(["chunk"], query=False)                                  # index embedding does NOT, by default
+    assert backup.calls == 1
+    g.backup_for_index = True
+    assert g.embed(["chunk"], query=False) and backup.calls == 2        # only when the owner allows it
+    assert g.generate_json("s", "u", {}) == {"ok": True} and g.usage["backup_calls"] == 3

@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     # gemini: Gemini Developer API with GEMINI_API_KEY.  vertex: Vertex AI with application default credentials.
     provider: str = "offline"  # offline | gemini | vertex
     gemini_api_key: str = ""
+    # Backup key (another project, own free-tier quota): generation + query embeddings fall back to it.
+    gemini_api_key_backup: str = ""
+    # Owner decision pending: whether INDEX embeddings may also use the backup key (faster than plan A).
+    embed_backup_for_index: bool = False
     gcp_project: str = ""
     gcp_location: str = "us-central1"
     # Confirmed against the live Gemini API (models.list) on 2026-10-15; 2.5 models are retired for new users; newest generation only.

@@ -103,7 +103,8 @@ def header(prov, conn, org_id: int, *, demo_corpus: bool = False) -> list[str]:
     if u:
         lines.append(f"- **Provider accounting:** {u.get('calls', 0)} successful calls, {u.get('fallbacks', 0)} "
                      f"answered by a fallback model, {u.get('retries', 0)} retries, "
-                     f"{u.get('prompt_tokens', 0)} prompt / {u.get('output_tokens', 0)} output tokens")
+                     f"{u.get('prompt_tokens', 0)} prompt / {u.get('output_tokens', 0)} output tokens"
+                     + (f" · {u['backup_calls']} answered via the backup key" if u.get("backup_calls") else ""))
     return lines
 
 
