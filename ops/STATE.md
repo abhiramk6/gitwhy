@@ -16,9 +16,19 @@ Updated: 2026-10-15
 ## Blocked on owner (via Telegram)
 - Rotate bot token; GitHub login (private repo); GCP free-trial + gcloud login; collaborator usernames.
 
+- Stage 4 (commit d079151): provider adapter (offline deterministic + Vertex), embeddings w/ admission,
+  hybrid retrieval (FTS+pgvector+graph, RRF), evidence-bound planner. 31 tests pass total (2026-10-15 09:25 UTC).
+
 ## Next
-- Stage 4: provider adapter (offline deterministic + Vertex), hybrid retrieval (FTS+pgvector+graph, RRF), planner, eval set.
-- Stage 5: API routes for dashboard + MCP route; 4-screen React UI.
+- Stage 5: API routes for dashboard + MCP route; 4-screen React UI (Vite).
+- Stage 6: GCP deploy (blocked on owner: GCP trial + gcloud login + approval for billable resources).
+- Stage 7: hardening, demo script, fallback mode.
+
+## Notes
+- Uncommitted but deliberate (bridge hardening by earlier process): ops/notify.sh, ops/telegram_bridge.sh.
+- Bridge targets live agent pane lore:shell.0; lore:agent is stuck at folder-trust prompt (harmless, idle).
+- Incident 2026-10-15: a resumed session with stale context overwrote Stage 1 scripts; restored from git (HEAD).
+  Before editing, check `git log -5` and `git status` to confirm what already exists.
 
 ## Local run
 - `set -a; source ~/.config/lore/db.env; set +a; cd backend; .venv/bin/python -m pytest -q`
