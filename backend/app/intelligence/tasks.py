@@ -268,15 +268,19 @@ PR_REVIEW = {
         "'reuse_opportunity' when a reuse finding says the pull request re-implements something that already "
         "exists: name the existing component to use; (7b) 'runbook_reminder' only when a runbook in the packet governs what is being changed; "
         "(7c) 'past_guidance': the packet's team_guidance lists things reviewers said in earlier threads (with who and when). Use it when the pull request description or changed files indicate the change does what that guidance warns against; cite the guidance fact, copy the shortest exact sentence of the reviewer's words that carries the guidance into 'quote', and say who said it and when in the comment; a guidance item that only shares a topic with the PR is not enough; (8) do not praise, summarise the diff or restate the description; (9) you only see file names, not the "
-        "diff: never make claims about specific lines or code you were not shown; `file` must be one of the "
-        "changed files or empty; (10) every comment has 'key': the most important phrase (at most 8 words) copied "
+        "diff only when 'diff_available' is true: then 'diff' lists the added (N+) and removed (-) lines of each file with new-file line numbers. "
+        "You may point at code only by copying one ADDED line, or a stretch of it, exactly into 'diff_quote' (leave it empty otherwise); "
+        "choose the added line that best shows the conflict (for example the query or call that does the thing the earlier words warn against); never write a line number yourself and never describe code you were not shown. `file` must be one of the "
+        "changed files or empty; for decision_violation and past_guidance also give 'why_conflict': one short sentence saying how this "
+        "change and the earlier statement conflict (what the earlier words ask for, what the change does); (10) every comment has 'key': the most important phrase (at most 8 words) copied "
         "exactly from the comment's own text; (11) keep each comment to at most two short sentences (about 40 words): name who said it and when, and say what to do; never paste the quoted source words into the comment, they go in 'quote'."),
     "schema": {"type": "object", "properties": {
         "comments": {"type": "array", "items": {"type": "object", "properties": {
             "type": {"type": "string"}, "file": {"type": "string"}, "comment": {"type": "string"},
             "quote": {"type": "string"}, "key": {"type": "string"},
+            "diff_quote": {"type": "string"}, "why_conflict": {"type": "string"},
             "evidence": {"type": "array", "items": {"type": "string"}}},
-            "required": ["type", "file", "comment", "quote", "key", "evidence"]}},
+            "required": ["type", "file", "comment", "quote", "key", "diff_quote", "why_conflict", "evidence"]}},
         "nothing_to_say": {"type": "boolean"}},
         "required": ["comments", "nothing_to_say"]},
 }

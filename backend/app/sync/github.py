@@ -64,6 +64,29 @@ def _pages(url: str, token: str, limit: int):
         page += 1
 
 
+PATCH_PER_FILE = 6_000
+PATCH_PER_PR = 30_000
+
+
+def pr_patches(full: str, number: int, token: str) -> tuple[dict, list[str], int]:
+    """The unified-diff hunks GitHub returns for a PR's changed files, bounded per file and per PR.
+    Returns (patches by file, every changed file name, how many patches were cut short or left out)."""
+    patches, names, cut, used = {}, [], 0, 0
+    for f in _pages(f"{API}/repos/{full}/pulls/{number}/files", token, 100):
+        names.append(f["filename"])
+        patch = f.get("patch")
+        if not patch:
+            continue  # binary, renamed without change, or too large for GitHub to inline
+        if len(patch) > PATCH_PER_FILE:
+            patch, cut = patch[:PATCH_PER_FILE].rsplit("\n", 1)[0], cut + 1
+        if used + len(patch) > PATCH_PER_PR:
+            cut += 1
+            continue
+        patches[f["filename"]] = patch
+        used += len(patch)
+    return patches, names, cut
+
+
 def whoami(token: str) -> dict:
     u = _get(f"{API}/user", token)
     return {"login": u["login"], "name": u.get("name")}
@@ -188,14 +211,18 @@ def build_fixture(root: Path, slug: str, name: str, repos: list[str], token: str
             if tkt:
                 linked += [f"{k}-{n}" for k, n in tkt.findall(f"{p['title']} {body} {p['head']['ref']}")]
             files = pr_files.get(p["number"])
+            try:
+                patches, names, cut = pr_patches(full, p["number"], token)
+            except GitHubError:
+                patches, names, cut = {}, [], 0
+                drop("pr_diff_unavailable")
             if files is None:
-                try:
-                    files = [f["filename"] for f in _pages(f"{API}/repos/{full}/pulls/{p['number']}/files", token, 100) if f["filename"] in copied]
-                except GitHubError:
-                    files = []
+                files = [n for n in names if n in copied]
+            if cut:
+                drop("pr_diff_truncated")
             prs_all.append({"repo": rname, "number": p["number"], "title": p["title"], "body": body, "author": (p.get("user") or {}).get("login"),
                             "merged_at": p["merged_at"][:10], "files": files, "linked_tickets": sorted(set(linked)), "adds_imports": [],
-                            "reviewers": []})
+                            "reviewers": [], "patches": patches})
             merged.append(p["number"])
             counts["pull_requests"] += 1
         progress("github", {"detail": f"reading review discussion of {full}"})

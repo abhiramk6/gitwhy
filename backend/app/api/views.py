@@ -36,9 +36,13 @@ def sources(conn: psycopg.Connection, org: int) -> dict:
         "SELECT fact_type, count(*) n FROM facts WHERE organization_id=%s AND status IN ('active','candidate') GROUP BY 1", (org,))}
     people = conn.execute("SELECT count(DISTINCT coalesce(payload->>'author', payload->>'assignee')) n FROM source_records "
                           "WHERE organization_id=%s", (org,)).fetchone()["n"]
+    prs = conn.execute("SELECT count(*) n, count(*) FILTER (WHERE payload ? 'patches' AND payload->'patches' <> '{}'::jsonb) with_diff "
+                       "FROM source_records WHERE organization_id=%s AND source_type='github_pr'", (org,)).fetchone()
+    diff_line = (f"{prs['with_diff']} of {prs['n']} pull requests carry their diff; a review names a line only where the diff shows it, "
+                 "and stays at file level elsewhere." if prs["n"] else "No pull requests were read.")
     return {"organization": org_row, "by_type": by_type, "embeddings": cov, "facts": facts, "people": people,
             "tiers": list(TIERS),
-            "limits": ["Pull requests are read at file level: diffs are not ingested, so reviews never claim line-level facts.",
+            "limits": [diff_line,
                        "Each embedding model is its own index; vectors of different models are never mixed.",
                        "Judgments are made by a model and kept only when they cite sources that exist."]}
 

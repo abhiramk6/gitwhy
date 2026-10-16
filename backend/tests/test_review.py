@@ -136,3 +136,42 @@ def test_past_guidance_needs_the_reviewers_exact_words(conn):
     out = draft_review(conn, org_id, provider(responder), "payments-api", 11)
     assert [c["type"] for c in out["comments"]] == ["past_guidance"] and out["comments"][0]["quote"]
     assert len(out["dropped"]) == 2
+
+
+def test_line_level_only_where_the_stored_diff_shows_it(conn):
+    quote = "Please don't add offset pagination"
+    cid = "payments-api#6/review_comment-9001"
+
+    def guidance(p):
+        return {"guidance": [{"id": cid, "topic": "pagination", "guidance": "Use cursors.", "scope": "org",
+                              "reason": "skipped rows", "quote": quote}]} if any(x["id"] == cid for x in p["comments"]) else {"guidance": []}
+
+    org_id, _ = ingest(conn, FIX)
+    build(conn, org_id, ideal_provider(choose=lambda p: ["payments-api"], review_guidance=guidance))
+
+    def responder(p):
+        g = p["team_guidance"][0]
+        assert p["diff_available"] and "OFFSET" in p["diff"][0]["changes"]
+        base = {"type": "past_guidance", "file": "payments/api.py", "evidence": [g["id"]], "quote": quote, "key": "offset",
+                "why_conflict": "The thread asks for cursors; this change pages by offset."}
+        return {"comments": [
+            {**base, "comment": "A reviewer asked not to use offset paging.", "diff_quote": "LIMIT %s OFFSET %s"},
+            {**base, "comment": "Offset paging again; see line 12.", "diff_quote": ""},                 # claims a line it cannot show
+            {**base, "comment": "Different wording, same worry.", "diff_quote": "ORDER BY id DESC"},   # not in the diff -> file-level
+        ], "nothing_to_say": False}
+
+    review = draft_review(conn, org_id, provider(responder), "payments-api", 11)
+    good = review["comments"][0]
+    assert good["in_pr"]["file"] == "payments/api.py" and good["in_pr"]["line"] == 49 and "OFFSET" in good["in_pr"]["text"]
+    assert good["earlier"]["who"] == "priya.raman" and good["earlier"]["when"] == "2026-06-08" and good["earlier"]["quote"] and good["why"]
+    assert any("does not show" in d["reason"] for d in review["dropped"])
+    assert [c["in_pr"] for c in review["comments"][1:]] == [None]
+
+
+def test_diff_parsing():
+    from app.review import diffs
+    patch = "@@ -1,3 +10,4 @@ def f():\n ctx\n-old\n+new one\n+new two\n tail"
+    assert diffs.added_lines(patch) == [(11, "new one"), (12, "new two")]
+    assert diffs.locate({"a.py": patch}, "NEW  two") == ("a.py", 12, "new two")
+    assert diffs.locate({"a.py": patch}, "old") is None and diffs.locate({"a.py": patch}, "ctx") is None
+    assert diffs.claims_a_line("see line 42") and not diffs.claims_a_line("the outline of it")

@@ -1226,6 +1226,9 @@
     "linked_tickets": [],
     "merged_at": "2026-09-09",
     "number": 11,
+    "patches": {
+      "payments/api.py": "@@ -41,6 +41,28 @@ def list_payments(page: int = 1, per_page: int = 50):\n     return {\"items\": rows, \"page\": page}\n \n \n+@router.get(\"/v1/refunds\")\n+def list_refunds(page: int = 1, per_page: int = 50):\n+    \"\"\"List refunds, newest first (same paging as /v1/payments).\"\"\"\n+    offset = (page - 1) * per_page\n+    rows = db.query(\n+        \"SELECT * FROM refunds ORDER BY created_at DESC LIMIT %s OFFSET %s\",\n+        (per_page, offset),\n+    )\n+    total = db.scalar(\"SELECT count(*) FROM refunds\")\n+    return {\"items\": rows, \"page\": page, \"per_page\": per_page, \"total\": total}\n+\n+\n def _serialize(payment):\n     return payment.to_dict()"
+    },
     "repo": "payments-api",
     "reviewers": [
       "marcus.lee"

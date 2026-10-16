@@ -13,7 +13,7 @@ function Draft({ r }) {
   const [off, setOff] = useState({})
   const col = useColumn()
   const reg = r.evidence || {}
-  const md = r.comments.filter((c, i) => !off[i]).map((c) => `**${KIND[c.type] || c.type}**${c.file ? ` (${c.file})` : ''}\n${c.comment}${c.quote ? `\n> ${c.quote}` : ''}`).join('\n\n')
+  const md = r.comments.filter((c, i) => !off[i]).map((c) => `**${KIND[c.type] || c.type}**${c.in_pr ? ` (${c.in_pr.file}:${c.in_pr.line})` : c.file ? ` (${c.file})` : ''}\n${c.comment}${c.quote ? `\n> ${c.quote}` : ''}`).join('\n\n')
   return (
     <div className="stack-s">
       {r.status === 'llm_required' && <p className="notice err">The write-up is down; search still works. Try again shortly. {r.explanation}</p>}
@@ -21,14 +21,32 @@ function Draft({ r }) {
       {r.comments.map((c, i) => (
         <div key={i} className={`cm${off[i] ? ' off' : ''}`}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
-            <span className="typ">{KIND[c.type] || c.type}{c.file && <> · <code>{c.file}</code></>}</span>
+            <span className="typ">{KIND[c.type] || c.type}{c.file && !c.earlier && <> · <code>{c.file}</code></>}</span>
             <span className="row"><span className="small muted"><span className={`dot ${c.label === 'verified' ? '' : 'inferred'}`} />{c.label}</span>
               <button className="btn quiet small" onClick={() => setOff({ ...off, [i]: !off[i] })}>{off[i] ? 'Keep' : 'Discard'}</button></span>
           </div>
-          <p className="text"><Hl text={c.comment} k={c.key} /></p>
-          {c.quote && (
-            <button type="button" className="pcard" onClick={() => col.open({ id: c.evidence[0], quote: c.quote, label: reg[c.evidence[0]]?.label })}>
-              <span className="pmeta">“ source</span><span className="pq">{c.quote}</span></button>
+          {c.earlier ? (
+            <div className="stack-s">
+              <div>
+                <div className="small muted">{c.earlier.kind === 'review' ? 'What was said' : 'The decision'} · {c.earlier.who ? shortName(c.earlier.who) : 'author not recorded'}{c.earlier.when ? ` · ${c.earlier.when}` : ''}</div>
+                {c.earlier.quote && (
+                  <button type="button" className="pcard" onClick={() => col.open({ id: c.earlier.id, quote: c.earlier.quote, label: reg[c.earlier.id]?.label })}>
+                    <span className="pmeta">“ source</span><span className="pq">{c.earlier.quote}</span></button>)}
+              </div>
+              {c.in_pr
+                ? <div><div className="small muted">In this PR · <code>{c.in_pr.file}</code> line {c.in_pr.line}</div><pre className="diffline">{c.in_pr.text}</pre></div>
+                : <div className="small muted">In this PR · {c.file ? <><code>{c.file}</code>, file level (the diff does not show a single line for this)</> : 'whole PR'}</div>}
+              {c.why && <div><div className="small muted">Why they conflict</div><p className="text" style={{ margin: 0 }}>{c.why}</p></div>}
+              <div><div className="small muted">Suggested review comment</div><p className="text" style={{ margin: 0 }}><Hl text={c.comment} k={c.key} /></p></div>
+            </div>
+          ) : (
+            <>
+              <p className="text"><Hl text={c.comment} k={c.key} /></p>
+              {c.quote && (
+                <button type="button" className="pcard" onClick={() => col.open({ id: c.evidence[0], quote: c.quote, label: reg[c.evidence[0]]?.label })}>
+                  <span className="pmeta">“ source</span><span className="pq">{c.quote}</span></button>
+              )}
+            </>
           )}
           <div style={{ marginTop: 12 }}><Tags ids={c.evidence} registry={reg} quote={c.quote} /></div>
         </div>

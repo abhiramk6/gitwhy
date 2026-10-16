@@ -8,7 +8,7 @@ compliance findings, ownership/bus-factor facts, dependency impact and runbooks.
   - labels (verified/inferred) come from the cited evidence, never from the model;
   - when nothing is supported the draft says so. Silence beats a guess.
 There is deliberately no network code in this module and no 'post' path: drafts are written to files under
-reviews/ and nowhere else. Diffs are not ingested, so comments are file-level, never line-level.
+reviews/ and nowhere else. A comment names a line only when the PR's stored diff shows it (verified literal match); otherwise it is file-level.
 
     python -m app.review.reviewer --repo notify-svc --pr 41     # ORG_SLUG selects the corpus
 """
@@ -23,6 +23,7 @@ from pathlib import Path
 import psycopg
 
 from ..graph.impact import impact
+from . import diffs
 from ..intelligence import tasks as T
 from ..intelligence.judge import meter, run_task
 from ..models.provider import LLMUnavailable, Provider
@@ -34,12 +35,23 @@ TYPES = {"decision_violation", "superseded_reference", "ownership_risk", "depend
          "missing_override", "reuse_opportunity", "past_guidance", "other"}
 EVIDENCE_BUDGET_CHARS = 30_000
 _WS = re.compile(r"\s+")
+_ADR_DATE = re.compile(r"^\s*(?:\*\*)?date(?:\*\*)?\s*:\s*(\d{4}-\d{2}-\d{2})", re.I | re.M)
+_ADR_WHO = re.compile(r"^\s*(?:\*\*)?(?:deciders?|author|decided[- ]by|owner)(?:\*\*)?\s*:\s*(.+)$", re.I | re.M)
 
 
 def _norm(s: str) -> str:
     """Whitespace, case, markdown emphasis/code ticks and curly quotes are not content: quotes still must match words."""
     s = (s or "").replace("`", "").replace("*", "").translate(str.maketrans("\u2018\u2019\u201c\u201d", "''\"\""))
     return _WS.sub(" ", s).strip().lower()
+
+
+def _short(quote: str, limit: int = 280) -> str:
+    """A long quote is cut back to whole sentences from its start (still literal source words), so the card stays readable."""
+    q = (quote or "").strip()
+    if len(q) <= limit:
+        return q
+    cut = max((m.end() for m in re.finditer(r"[.!?](?=\s)", q) if m.end() <= limit), default=0)
+    return q[:cut].strip() if cut else q[:limit].rsplit(" ", 1)[0] + "…"
 
 
 def _fits(quote: str, text: str) -> bool:
@@ -57,10 +69,13 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
     payload = pr["payload"]
     files = payload.get("files", [])
     pid = ev.add(f"pr:{repo}#{number}", "pull_request", f"{repo}#{number}: {pr['title']}", pr["source_url"], "explicit")
+    patches = payload.get("patches") or {}
     packet: dict = {"pull_request": {
         "id": pid, "repo": repo, "title": pr["title"], "description": pr["body"] or "", "files": files,
         "adds_imports": payload.get("adds_imports", []), "author": payload.get("author"),
-        "labels": payload.get("labels", []), "linked_tickets": payload.get("linked_tickets", [])}}
+        "labels": payload.get("labels", []), "linked_tickets": payload.get("linked_tickets", [])},
+        "diff": diffs.digest(patches), "diff_available": bool(patches)}
+    earlier: dict[str, dict] = {}  # who/when of each decision or reviewer statement, from the stored sources, not from the model
 
     repo_row = conn.execute("SELECT id FROM repositories WHERE organization_id=%s AND name=%s", (org_id, repo)).fetchone()
     repo_id = repo_row["id"] if repo_row else None
@@ -85,6 +100,10 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
                 decisions.append({"id": eid, "adr": f["object_value"], "status": f["status"], "summary": f["summary"],
                                   "text": text})
                 decision_text[eid] = text
+                d, w = _ADR_DATE.search(text), _ADR_WHO.search(text)
+                earlier[eid] = {"kind": "decision", "who": (f["author"] or (w.group(1).strip() if w else None)),
+                                "when": d.group(1) if d else (f["valid_from"].date().isoformat() if f["valid_from"] else None),
+                                "title": f["summary"], "source": f["source_url"]}
         elif f["source_type"] == "github_pr" and f["source_id"] == f"{repo}#{number}":
             eid = ev.add(f"fact:{f['id']}", f["fact_type"], f["summary"], f["source_url"], f["evidence_type"], f["status"])
             others["existing_findings"].append({"id": eid, "type": f["fact_type"], "predicate": f["predicate"],
@@ -95,6 +114,8 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
                                "source_id=%s", (org_id, f["source_type"], f["source_id"])).fetchone()
             eid = ev.add(f"fact:{f['id']}", "review_guidance", f["summary"], f["source_url"], f["evidence_type"], f["status"])
             guidance_text[eid] = (src or {}).get("body") or f["summary"]
+            earlier[eid] = {"kind": "review", "who": ((src or {}).get("payload") or {}).get("author"),
+                            "when": ((src or {}).get("payload") or {}).get("date"), "title": f["summary"], "source": f["source_url"]}
             others["team_guidance"].append({"id": eid, "summary": f["summary"], "scope": f["scope"],
                                             "said_by": ((src or {}).get("payload") or {}).get("author"),
                                             "date": ((src or {}).get("payload") or {}).get("date"),
@@ -134,7 +155,7 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
             docs.append({"id": eid, "title": h.title, "source": h.source_id, "passage": h.snippet[:1500]})
     packet["runbooks_and_docs"] = docs
     return packet, ev, {"search_mode": meta["mode"], "decision_text": decision_text, "guidance_text": guidance_text,
-                     "files": files}
+                     "files": files, "patches": patches, "earlier": earlier}
 
 
 def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo: str, number: int) -> dict:
@@ -182,15 +203,27 @@ def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo
                                 "comment": c.get("comment", "")[:120]})
                 continue
         file = c.get("file") or ""
-        if file and file not in aux["files"]:
+        if file and file not in aux["files"] and file not in aux["patches"]:
             file = ""  # we only know changed files; never point at a file the PR does not touch
         key = (ctype, file, _norm(c.get("comment", "")))
         if key in seen or not c.get("comment", "").strip():
             continue
+        # line-level only when the model's literal added line really sits in the stored diff; the number comes from the hunks
+        hit = diffs.locate(aux["patches"], c.get("diff_quote", ""), file) if aux["patches"] else None
+        if not hit and diffs.claims_a_line(c.get("comment", "") + " " + c.get("why_conflict", "")):
+            dropped.append({"reason": "names a line that the stored diff does not show", "comment": c.get("comment", "")[:120]})
+            continue
+        if hit:
+            file = hit[0]
         seen.add(key)
+        src_id = next((i for i in ids if i in aux["earlier"]), None)
         comments.append({"type": ctype, "file": file or None, "comment": c["comment"].strip(),
+                         "why": (c.get("why_conflict") or "").strip() or None,
+                         "earlier": ({**aux["earlier"][src_id], "id": src_id, "quote": _short(c.get("quote")) or None} if src_id and ctype in
+                                     ("decision_violation", "past_guidance", "superseded_reference") else None),
+                         "in_pr": ({"file": hit[0], "line": hit[1], "text": hit[2]} if hit else None),
                          "key": exact_phrase(c.get("key", ""), c["comment"]),
-                         "quote": (c.get("quote") or None) if ctype in ("decision_violation", "past_guidance") else None,
+                         "quote": (_short(c.get("quote")) or None) if ctype in ("decision_violation", "past_guidance") else None,
                          "evidence": ids, "label": _label_for(ev, ids)})
     after = meter.snapshot()
     return {"status": "draft", "repo": repo, "pr": number, "title": packet["pull_request"]["title"],
@@ -201,7 +234,9 @@ def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo
                            "model_calls_live": after["live"] - before["live"],
                            "replayed": after["replayed"] - before["replayed"],
                            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                           "limitations": "file-level only: diffs are not ingested; comments never claim line-level facts"}}
+                           "diff": bool(aux["patches"]),
+                           "limitations": ("line-level comments only where the stored diff shows the line; elsewhere file-level"
+                                           if aux["patches"] else "file-level only: no diff is stored for this PR, so no comment claims a line")}}
 
 
 def render(review: dict) -> str:
