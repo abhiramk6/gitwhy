@@ -270,7 +270,7 @@ PR_REVIEW = {
         "(7c) 'past_guidance': the packet's team_guidance lists things reviewers said in earlier threads (with who and when). Use it when the pull request description or changed files indicate the change does what that guidance warns against; cite the guidance fact, copy the shortest exact sentence of the reviewer's words that carries the guidance into 'quote', and say who said it and when in the comment; a guidance item that only shares a topic with the PR is not enough; (8) do not praise, summarise the diff or restate the description; (9) you only see file names, not the "
         "diff: never make claims about specific lines or code you were not shown; `file` must be one of the "
         "changed files or empty; (10) every comment has 'key': the most important phrase (at most 8 words) copied "
-        "exactly from the comment's own text."),
+        "exactly from the comment's own text; (11) keep each comment to at most two short sentences (about 40 words): name who said it and when, and say what to do; never paste the quoted source words into the comment, they go in 'quote'."),
     "schema": {"type": "object", "properties": {
         "comments": {"type": "array", "items": {"type": "object", "properties": {
             "type": {"type": "string"}, "file": {"type": "string"}, "comment": {"type": "string"},

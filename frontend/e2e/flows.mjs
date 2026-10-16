@@ -19,18 +19,15 @@ await run('ask', async () => {
   await page.goto(BASE + '/#/ask'); await page.waitForSelector('.chip'); await shot('01-ask-start')
   await page.click('.chip:has-text("cursor pagination")')
   await page.waitForSelector('.headline', { timeout: 120000 }); await page.waitForTimeout(1200); await shot('02-ask-answer')
-  await page.click('.pcard >> nth=0'); await page.waitForSelector('.col .words'); await shot('02b-ask-source-open')
+  await page.click('.pcard >> nth=0'); await page.waitForSelector('.col .hero'); await shot('02b-ask-source-open')
 })
 await run('review', async () => {
-  await page.goto(BASE + '/#/review'); await page.waitForSelector('.list li button')
-  await page.click('.list li button:has-text("refunds listing")')
-  await page.click('button:has-text("Draft review")'); await page.waitForSelector('.cm', { timeout: 120000 })
-  await page.click('.cm .tag >> nth=0'); await page.waitForSelector('.col .words'); await shot('03-review-draft')
+  await page.goto(BASE + '/#/review'); await page.waitForSelector('.cm', { timeout: 120000 }); await shot('03-review-draft')
 })
 await run('memory', async () => {
   await page.goto(BASE + '/#/memory'); await page.waitForSelector('.list li button')
   await page.click('.list li button:has-text("Cursor pagination")')
-  await page.waitForSelector('.story .pill', { timeout: 120000 }); await shot('04-memory-story')
+  await page.waitForSelector('.story', { timeout: 120000 }); await shot('04-memory-story')
 })
 await run('people', async () => {
   await page.goto(BASE + '/#/people'); await page.waitForSelector('.list li button')
@@ -38,7 +35,7 @@ await run('people', async () => {
   await page.waitForSelector('.headline', { timeout: 120000 }); await shot('05-people-handover')
 })
 await run('plan', async () => {
-  await page.goto(BASE + '/#/plan'); await page.click('button:has-text("Plan it")'); await page.waitForSelector('.turn .tag', { timeout: 180000 }); await shot('06-plan')
+  await page.goto(BASE + '/#/plan'); await page.click('button:has-text("Plan it")'); await page.waitForSelector('.tasks', { timeout: 180000 }); await shot('06-plan')
 })
 await run('trace', async () => {
   await page.goto(BASE + '/#/trace?f=' + encodeURIComponent('notify-svc:notify/dedupe.py')); await page.waitForSelector('.headline', { timeout: 120000 }); await shot('07-trace')

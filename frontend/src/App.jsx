@@ -15,6 +15,7 @@ const NAV = [
   ['ask', 'Ask', Ask], ['review', 'Review', Review], ['memory', 'Memory', Memory], ['people', 'People', People],
   ['plan', 'Plan', Plan], ['trace', 'Trace', Trace], ['sources', 'Sources', Sources], ['map', 'Map', GraphPage],
 ]
+const NAV_SHOWN = ['ask', 'review', 'memory', 'people', 'plan', 'trace', 'sources']
 
 function Shell() {
   const { page, q } = useRoute()
@@ -31,9 +32,7 @@ function Shell() {
       <header className="top">
         <div className="brand">{product.name}<small>{product.tagline}</small></div>
         <nav className="nav" aria-label="Main">
-          {NAV.slice(0, 5).map(([k, l]) => <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''}>{l}</a>)}
-          <span className="gap" />
-          {NAV.slice(5).map(([k, l]) => <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''}>{l}</a>)}
+          {NAV.filter(([k]) => NAV_SHOWN.includes(k)).map(([k, l]) => <a key={k} href={`#/${k}`} className={page === k || (page === 'map' && k === 'sources') ? 'on' : ''}>{l}</a>)}
         </nav>
         {org && <span className="org">{org.name}{org.is_synthetic ? ' (synthetic)' : ''}</span>}
         <button className="btn quiet small" onClick={() => setShowTok((s) => !s)} aria-label="Demo token" title="Demo token (only if the server asks for one)">⚿</button>

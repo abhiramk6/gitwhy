@@ -1,5 +1,5 @@
 import { api } from '../api.js'
-import { TYPES, ago } from '../ui.jsx'
+import { ago } from '../ui.jsx'
 import { useAsync } from '../components.jsx'
 
 const ORDER = ['adr', 'jira_issue', 'github_pr', 'github_comment', 'github_commit', 'doc', 'file']
@@ -9,39 +9,30 @@ export default function Sources() {
   const s = useAsync(api.sources)
   const runs = useAsync(api.ingestion)
   const d = s.data
+  const total = d ? Object.values(d.by_type).reduce((n, v) => n + v.count, 0) : 0
+  const newest = d ? Object.values(d.by_type).map((v) => v.latest).filter(Boolean).sort().pop() : null
+  const models = d ? Object.entries(d.embeddings) : []
   return (
     <div className="stack">
-      <div><h1>What has been read, and what has not</h1>
-        <p className="lede">The product is only as deep as these sources. Counts, freshness, the embedding model in use and any limits are stated here rather than assumed.</p></div>
+      <div><h1>What has been read, and what has not.</h1>
+        {d && <p className="lede">Read {total.toLocaleString()} items across {Object.keys(d.by_type).length} sources{newest ? `, latest from ${ago(newest)}` : ''}.</p>}</div>
       {s.error && <p className="notice err">{s.error.message}</p>}
       {d && (
         <>
-          <section className="sect"><h2>{d.organization.name}</h2>
-            <table className="tbl"><thead><tr><th>Source</th><th className="num">Records</th><th>Newest</th></tr></thead><tbody>
-              {ORDER.filter((k) => d.by_type[k]).map((k) => (
-                <tr key={k}><td><span style={{ color: (TYPES[k] || TYPES.fact).color, marginRight: 8 }}>{(TYPES[k] || TYPES.fact).glyph}</span>{NAME[k]}</td>
-                  <td className="num">{d.by_type[k].count.toLocaleString()}</td><td className="num">{d.by_type[k].latest ? ago(d.by_type[k].latest) : ''}</td></tr>
-              ))}</tbody></table>
-            <p className="small muted" style={{ marginTop: 10 }}>{d.people} people appear in this history. Remembered facts: {Object.entries(d.facts).map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`).join(', ')}.</p>
-          </section>
-          <section className="sect"><h2>Search index</h2>
-            {Object.keys(d.embeddings).length === 0 && <p className="notice">No vectors yet: search is keyword-only until an embedding model has indexed the sources.</p>}
-            {Object.entries(d.embeddings).map(([m, c]) => (
-              <div key={m} style={{ marginBottom: 16 }}>
-                <p><b>{m}</b> <span className="muted num">{c.stored.toLocaleString()} of {c.wanted.toLocaleString()} chunks</span></p>
-                <div className="bar" style={{ margin: '6px 0 8px' }}><i style={{ width: `${(c.stored / Math.max(c.wanted, 1)) * 100}%` }} /></div>
-                <p className="small muted num">{c.tiers.map((t) => `${t.label} ${t.stored}/${t.wanted}`).join(', ')}</p>
-              </div>
-            ))}
-          </section>
-          <section className="sect"><h2>Limits, stated plainly</h2><ul style={{ paddingLeft: 18, margin: 0 }}>{d.limits.map((l) => <li key={l} style={{ marginBottom: 6 }}>{l}</li>)}</ul></section>
+          {models.length === 0 ? <p className="notice">Nothing is indexed for search yet, so search is keyword-only.</p> : models.map(([m, c]) => (
+            <div key={m}><div className="row" style={{ justifyContent: 'space-between' }}><span><b style={{ fontWeight: 600 }}>Search index</b> <span className="muted">{m}</span></span><span className="num muted">{c.stored.toLocaleString()} of {c.wanted.toLocaleString()}</span></div>
+              <div className="bar" style={{ marginTop: 8 }}><i style={{ width: `${(c.stored / Math.max(c.wanted, 1)) * 100}%` }} /></div></div>
+          ))}
+          <table className="tbl"><thead><tr><th>{d.organization.name}</th><th className="num">Items</th><th>Newest</th></tr></thead><tbody>
+            {ORDER.filter((k) => d.by_type[k]).map((k) => <tr key={k}><td>{NAME[k]}</td><td className="num">{d.by_type[k].count.toLocaleString()}</td><td>{d.by_type[k].latest ? ago(d.by_type[k].latest) : ''}</td></tr>)}</tbody></table>
+          <details className="evidence"><summary>See all limits and details</summary>
+            <ul style={{ paddingLeft: 20, margin: '0 0 16px' }}>{d.limits.map((l) => <li key={l} style={{ marginBottom: 8 }}>{l}</li>)}</ul>
+            {models.map(([m, c]) => <p key={m} className="small muted num">{m}: {c.tiers.map((t) => `${t.label} ${t.stored}/${t.wanted}`).join(', ')}</p>)}
+            <p className="small muted">{d.people} people appear in this history. Remembered: {Object.entries(d.facts).map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`).join(', ')}.</p>
+            {runs.data?.length > 0 && <p className="small muted">Recent runs: {runs.data.slice(0, 4).map((r) => `${r.source} ${r.mode} ${r.status}`).join('; ')}.</p>}
+            <p><a href="#/map">Dependency map</a></p>
+          </details>
         </>
-      )}
-      {runs.data?.length > 0 && (
-        <section className="sect"><h2>Recent ingestion runs</h2>
-          <table className="tbl"><thead><tr><th>Source</th><th>Mode</th><th>Status</th><th className="num">Seen</th><th className="num">New</th></tr></thead><tbody>
-            {runs.data.slice(0, 6).map((r) => <tr key={r.id}><td>{r.source}</td><td>{r.mode}</td><td>{r.status}</td><td className="num">{r.records_seen}</td><td className="num">{r.records_new}</td></tr>)}</tbody></table>
-        </section>
       )}
     </div>
   )
