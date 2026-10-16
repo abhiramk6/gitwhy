@@ -512,7 +512,30 @@ def build_prs(jira: list[dict]) -> list[dict]:
         ["payments/api.py"],
         "Adds a list endpoint for refunds. Pagination uses ?page=N&per_page=50 offset paging, same as /v1/payments.",
         [], ["marcus.lee"])
+    prs[-1]["patches"] = {"payments/api.py": REFUNDS_PATCH}   # the diff is part of the scenario: the offset query is what the thread warned against
     return prs
+
+
+REFUNDS_PATCH = (
+    "@@ -41,6 +41,28 @@ def list_payments(page: int = 1, per_page: int = 50):\n"
+    "     return {\"items\": rows, \"page\": page}\n \n \n"
+    "+def list_refunds(page: int = 1, per_page: int = 50):\n"
+    "+    \"\"\"List refunds, newest first (same paging as /v1/payments).\"\"\"\n"
+    "+    offset = (page - 1) * per_page\n"
+    "+    rows = db.query(\n"
+    "+        \"SELECT * FROM refunds ORDER BY created_at DESC LIMIT %s OFFSET %s\",\n"
+    "+        (per_page, offset),\n"
+    "+    )\n"
+    "+    total = db.scalar(\"SELECT count(*) FROM refunds\")\n"
+    "+    return {\"items\": rows, \"page\": page, \"per_page\": per_page, \"total\": total}\n"
+    "+\n"
+    "+\n"
+    "+router.add_api_route(\"/v1/refunds\", list_refunds)\n"
+    "+\n"
+    "+\n"
+    " def _serialize(payment):\n"
+    "     return payment.to_dict()"
+)
 
 
 # ------------------------------------------------------------------ manifest + IO

@@ -162,7 +162,7 @@ def test_line_level_only_where_the_stored_diff_shows_it(conn):
 
     review = draft_review(conn, org_id, provider(responder), "payments-api", 11)
     good = review["comments"][0]
-    assert good["in_pr"]["file"] == "payments/api.py" and good["in_pr"]["line"] == 49 and "OFFSET" in good["in_pr"]["text"]
+    assert good["in_pr"]["file"] == "payments/api.py" and good["in_pr"]["line"] == 48 and "OFFSET" in good["in_pr"]["text"]
     assert good["earlier"]["who"] == "priya.raman" and good["earlier"]["when"] == "2026-06-08" and good["earlier"]["quote"] and good["why"]
     assert any("does not show" in d["reason"] for d in review["dropped"])
     assert [c["in_pr"] for c in review["comments"][1:]] == [None]
