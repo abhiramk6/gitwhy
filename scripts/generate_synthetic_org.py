@@ -506,6 +506,12 @@ def build_prs(jira: list[dict]) -> list[dict]:
                 files_i = [files[i % len(files)]]
             add(repo, number, f"{repo}: improve {files_i[0].split('/')[-1]} ({seq})", author, when, files_i,
                 "Routine change.", [done_by_proj[proj[repo]][i % len(done_by_proj[proj[repo]])]])
+    # S9: a recent change that ignores guidance given in a review thread months earlier (payments-api#6, see
+    # northwind_discussion.json). Nothing in the PR mentions that thread; only team memory can catch it.
+    add("payments-api", counters["payments-api"] + 1, "Add GET /v1/refunds listing", "ines.kowalski", date(2026, 9, 9),
+        ["payments/api.py"],
+        "Adds a list endpoint for refunds. Pagination uses ?page=N&per_page=50 offset paging, same as /v1/payments.",
+        [], ["marcus.lee"])
     return prs
 
 
@@ -526,6 +532,7 @@ def build_manifest(commits, prs, jira) -> dict:
             "S5_multi_service_feature": {"ticket": "PAY-142", "impact": ["customer-portal", "ledger-core", "notify-svc", "payments-api"]},
             "S6_reuse_candidate": {"existing": "platform-libs:platform_libs/idempotency.py", "duplicate": "notify-svc:notify/dedupe.py"},
             "S7_superseded_decision": {"superseded": "ADR-002", "by": "ADR-007", "stale_reference": "payments-api:payments/ledger_client.py"},
+            "S9_review_memory": {"guidance_pr": "payments-api#6", "violating_pr": "payments-api#11", "topic": "pagination"},
             "S8_migration_risk": {"ticket": "LED-88", "blocks": "PAY-142", "field": "ledger/models.py:amount_cents"},
         },
     }

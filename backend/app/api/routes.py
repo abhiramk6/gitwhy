@@ -179,3 +179,20 @@ def archaeology(repo: str = Query(min_length=1), path: str = Query(min_length=1)
     if not t:
         raise HTTPException(404, "file not found")
     return t
+
+
+@router.get("/memory/guidance")
+def memory_guidance(conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id)):
+    from ..memory.timeline import list_guidance
+    return list_guidance(conn, org)
+
+
+@router.post("/memory/guidance/{fact_id}/timeline", dependencies=[Depends(require_write)])
+def memory_timeline(fact_id: int, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
+                    provider: Provider = Depends(get_provider)):
+    from ..memory.timeline import timeline
+    out = timeline(conn, org, provider, fact_id)
+    conn.commit()
+    if out is None:
+        raise HTTPException(404, "guidance not found")
+    return out

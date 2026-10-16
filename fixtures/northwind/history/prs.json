@@ -1213,5 +1213,25 @@
     "state": "merged",
     "synthetic": true,
     "title": "platform-libs: improve auth.py (50)"
+  },
+  {
+    "adds_imports": [],
+    "author": "ines.kowalski",
+    "body": "Adds a list endpoint for refunds. Pagination uses ?page=N&per_page=50 offset paging, same as /v1/payments.",
+    "created_at": "2026-09-07",
+    "files": [
+      "payments/api.py"
+    ],
+    "labels": [],
+    "linked_tickets": [],
+    "merged_at": "2026-09-09",
+    "number": 11,
+    "repo": "payments-api",
+    "reviewers": [
+      "marcus.lee"
+    ],
+    "state": "merged",
+    "synthetic": true,
+    "title": "Add GET /v1/refunds listing"
   }
 ]

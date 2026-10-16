@@ -4,7 +4,7 @@
     "commits": 136,
     "jira_issues": 42,
     "people": 6,
-    "pull_requests": 55,
+    "pull_requests": 56,
     "repos": 5
   },
   "organization": {
@@ -70,6 +70,11 @@
       "blocks": "PAY-142",
       "field": "ledger/models.py:amount_cents",
       "ticket": "LED-88"
+    },
+    "S9_review_memory": {
+      "guidance_pr": "payments-api#6",
+      "topic": "pagination",
+      "violating_pr": "payments-api#11"
     }
   }
 }

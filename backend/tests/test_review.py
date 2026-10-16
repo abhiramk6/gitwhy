@@ -111,3 +111,28 @@ def test_reuse_opportunity_needs_a_reuse_finding_and_dependency_impact_is_dedupl
     assert kinds.count("reuse_opportunity") == 1 and "IdempotencyStore" in review["comments"][0]["comment"]
     assert kinds.count("dependency_impact") <= 1
     assert any("does not cite a reuse finding" in d["reason"] for d in review["dropped"])
+
+
+def test_past_guidance_needs_the_reviewers_exact_words(conn):
+    quote = "Please don't add offset pagination"
+    cid = "payments-api#6/review_comment-9001"
+
+    def guidance(p):
+        c = next(x for x in p["comments"] if x["id"] == cid)
+        return {"guidance": [{"id": cid, "topic": "pagination", "guidance": "Use cursors.", "scope": "org",
+                              "reason": "skipped rows", "quote": quote}]} if c else {"guidance": []}
+
+    org_id, _ = ingest(conn, FIX)
+    build(conn, org_id, ideal_provider(choose=lambda p: ["payments-api"], review_guidance=guidance))
+
+    def responder(p):
+        g = p["team_guidance"][0]
+        assert g["said_by"] == "priya.raman" and g["date"] == "2026-06-08" and quote in g["exact_words"]
+        base = {"type": "past_guidance", "file": "payments/api.py", "evidence": [g["id"]], "comment": "Use cursors."}
+        return {"comments": [{**base, "quote": "Please DON'T add `offset pagination`"},       # formatting/case ignored
+                             {**base, "comment": "Invented.", "quote": "never use page numbers anywhere"},
+                             {**base, "comment": "No guidance cited.", "evidence": [p["decisions"][0]["id"]],
+                              "quote": quote}], "nothing_to_say": False}
+    out = draft_review(conn, org_id, provider(responder), "payments-api", 11)
+    assert [c["type"] for c in out["comments"]] == ["past_guidance"] and out["comments"][0]["quote"]
+    assert len(out["dropped"]) == 2

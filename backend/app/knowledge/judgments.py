@@ -15,7 +15,9 @@ from ..models.provider import LLMUnavailable
 
 
 def _norm(s: str) -> str:
-    return re.sub(r"\s+", " ", s or "").strip().lower()
+    """Whitespace, case, markdown ticks/emphasis and curly quotes are not content; the words themselves must match."""
+    s = (s or "").replace("`", "").replace("*", "").translate(str.maketrans("\u2018\u2019\u201c\u201d", "''\"\""))
+    return re.sub(r"\s+", " ", s).strip().lower()
 
 
 def _quoted(quote: str, text: str) -> bool:

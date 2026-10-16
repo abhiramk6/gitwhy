@@ -30,13 +30,15 @@ from ..planning.planner import Evidence, _label_for, _valid
 from ..retrieval.search import search_with_meta
 
 TYPES = {"decision_violation", "superseded_reference", "ownership_risk", "dependency_impact", "runbook_reminder",
-         "missing_override", "reuse_opportunity", "other"}
+         "missing_override", "reuse_opportunity", "past_guidance", "other"}
 EVIDENCE_BUDGET_CHARS = 30_000
 _WS = re.compile(r"\s+")
 
 
 def _norm(s: str) -> str:
-    return _WS.sub(" ", s or "").strip().lower()
+    """Whitespace, case, markdown emphasis/code ticks and curly quotes are not content: quotes still must match words."""
+    s = (s or "").replace("`", "").replace("*", "").translate(str.maketrans("\u2018\u2019\u201c\u201d", "''\"\""))
+    return _WS.sub(" ", s).strip().lower()
 
 
 def _fits(quote: str, text: str) -> bool:
@@ -70,7 +72,8 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
         "SELECT source_id, body FROM source_records WHERE organization_id=%s AND source_type='adr'", (org_id,))}
 
     decisions, decision_text = [], {}
-    others = {"existing_findings": [], "ownership": [], "reuse": []}
+    others = {"existing_findings": [], "ownership": [], "reuse": [], "team_guidance": []}
+    guidance_text: dict[str, str] = {}
     for f in conn.execute("SELECT * FROM facts WHERE organization_id=%s AND status IN ('active','candidate','superseded') "
                           "ORDER BY id", (org_id,)):
         if f["fact_type"] == "decision":
@@ -85,6 +88,16 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
             eid = ev.add(f"fact:{f['id']}", f["fact_type"], f["summary"], f["source_url"], f["evidence_type"], f["status"])
             others["existing_findings"].append({"id": eid, "type": f["fact_type"], "predicate": f["predicate"],
                                                 "status": f["status"], "summary": f["summary"]})
+        elif f["fact_type"] == "review_guidance" and f["status"] in ("active", "candidate") and \
+                (f["scope"] == "org" or f["repository_id"] == repo_id):
+            src = conn.execute("SELECT body, payload FROM source_records WHERE organization_id=%s AND source_type=%s AND "
+                               "source_id=%s", (org_id, f["source_type"], f["source_id"])).fetchone()
+            eid = ev.add(f"fact:{f['id']}", "review_guidance", f["summary"], f["source_url"], f["evidence_type"], f["status"])
+            guidance_text[eid] = (src or {}).get("body") or f["summary"]
+            others["team_guidance"].append({"id": eid, "summary": f["summary"], "scope": f["scope"],
+                                            "said_by": ((src or {}).get("payload") or {}).get("author"),
+                                            "date": ((src or {}).get("payload") or {}).get("date"),
+                                            "exact_words": guidance_text[eid]})
         elif f["fact_type"] == "reuse" and f["repository_id"] == repo_id and f["status"] in ("active", "candidate"):
             eid = ev.add(f"fact:{f['id']}", "reuse", f["summary"], f["source_url"], f["evidence_type"], f["status"])
             others["reuse"].append({"id": eid, "summary": f["summary"], "status": f["status"]})
@@ -119,7 +132,8 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
             eid = ev.add(f"hit:record:{h.id}", "retrieval", h.title, h.source_url, "inferred", h.status or "active")
             docs.append({"id": eid, "title": h.title, "source": h.source_id, "passage": h.snippet[:1500]})
     packet["runbooks_and_docs"] = docs
-    return packet, ev, {"search_mode": meta["mode"], "decision_text": decision_text, "files": files}
+    return packet, ev, {"search_mode": meta["mode"], "decision_text": decision_text, "guidance_text": guidance_text,
+                     "files": files}
 
 
 def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo: str, number: int) -> dict:
@@ -147,6 +161,12 @@ def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo
             if not any(_fits(c.get("quote", ""), aux["decision_text"][i]) for i in cited):
                 dropped.append({"reason": "quote not found in the cited decision", "comment": c.get("comment", "")[:120]})
                 continue
+        if ctype == "past_guidance":
+            cited = [i for i in ids if i in aux["guidance_text"]]
+            if not cited or not any(_fits(c.get("quote", ""), aux["guidance_text"][i]) for i in cited):
+                dropped.append({"reason": "past guidance not cited, or quote not in the reviewer's words",
+                                "comment": c.get("comment", "")[:120]})
+                continue
         if ctype == "reuse_opportunity" and not any(ev.items[i]["kind"] == "reuse" for i in ids):
             dropped.append({"reason": "reuse suggestion does not cite a reuse finding", "comment": c.get("comment", "")[:120]})
             continue
@@ -168,7 +188,7 @@ def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo
             continue
         seen.add(key)
         comments.append({"type": ctype, "file": file or None, "comment": c["comment"].strip(),
-                         "quote": (c.get("quote") or None) if ctype == "decision_violation" else None,
+                         "quote": (c.get("quote") or None) if ctype in ("decision_violation", "past_guidance") else None,
                          "evidence": ids, "label": _label_for(ev, ids)})
     after = meter.snapshot()
     return {"status": "draft", "repo": repo, "pr": number, "title": packet["pull_request"]["title"],

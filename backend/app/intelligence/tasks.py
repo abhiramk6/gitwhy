@@ -192,6 +192,28 @@ HANDOVER = {
                      "first_week"]},
 }
 
+GUIDANCE_TIMELINE = {
+    "system": (
+        "A reviewer once gave guidance in a code-review thread. You are given that guidance (with the reviewer's exact "
+        "words, author and date) and numbered candidate records from the same organization (decisions, later "
+        "review comments, pull requests, tickets, docs, code). For each candidate that bears on the guidance, give the "
+        "relation: 'restates' (says the same thing again), 'follows' (the work obeys it), 'conflicts' (the work or text "
+        "contradicts it), 'replaces' (a later decision or comment explicitly overrides or supersedes it), or 'mentions' "
+        "(touches the same topic without taking a side). Skip unrelated candidates. For every item give 'quote': words "
+        "copied exactly from that candidate that show the relation, and a one-sentence 'note'. Then give an overall "
+        "status for the guidance TODAY: 'holds' (nothing contradicts or replaces it), 'contradicted' (later work or text "
+        "conflicts and nothing explains it), 'replaced' (a later explicit decision replaces it), or 'unclear'; with a "
+        "one-sentence reason and the candidate ids that justify it. A candidate dated before the guidance cannot "
+        "replace it. Say nothing rather than guess."),
+    "schema": {"type": "object", "properties": {
+        "events": {"type": "array", "items": {"type": "object", "properties": {
+            "id": {"type": "string"}, "relation": {"type": "string"}, "quote": {"type": "string"}, "note": {"type": "string"}},
+            "required": ["id", "relation", "quote", "note"]}},
+        "status": {"type": "string"}, "status_reason": {"type": "string"},
+        "status_cites": {"type": "array", "items": {"type": "string"}}},
+        "required": ["events", "status", "status_reason", "status_cites"]},
+}
+
 PR_REVIEW = {
     "system": (
         "You draft code-review comments for ONE pull request from team knowledge only. You are given the pull "
@@ -210,7 +232,7 @@ PR_REVIEW = {
         "touches the service's interface or behaviour, never as a fact that behaviour changes; (7) "
         "'reuse_opportunity' when a reuse finding says the pull request re-implements something that already "
         "exists: name the existing component to use; (7b) 'runbook_reminder' only when a runbook in the packet governs what is being changed; "
-        "(8) do not praise, summarise the diff or restate the description; (9) you only see file names, not the "
+        "(7c) 'past_guidance': the packet's team_guidance lists things reviewers said in earlier threads (with who and when). Use it when the pull request description or changed files indicate the change does what that guidance warns against; cite the guidance fact, copy the reviewer's exact words into 'quote', and say who said it and when in the comment; a guidance item that only shares a topic with the PR is not enough; (8) do not praise, summarise the diff or restate the description; (9) you only see file names, not the "
         "diff: never make claims about specific lines or code you were not shown; `file` must be one of the "
         "changed files or empty."),
     "schema": {"type": "object", "properties": {
