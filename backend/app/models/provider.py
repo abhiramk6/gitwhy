@@ -15,6 +15,7 @@ import threading
 from typing import Protocol
 
 EMBED_DIM = 768
+CHARS_PER_TOKEN = 3.0  # conservative over-estimate used for request sizing and spend caps
 _TOKEN = re.compile(r"[a-z0-9_+\-]+")
 
 
@@ -267,7 +268,32 @@ def _unit(v) -> list[float]:
     return [x / n for x in v]
 
 
+class _ComposedProvider:
+    """Generation from `llm`, embeddings from a separate embedder (e.g. Voyage). Everything else delegates to `llm`."""
+    semantic_embeddings = True
+
+    def __init__(self, llm, embedder):
+        self._llm, self._embedder = llm, embedder
+        self.embed_model = embedder.embed_model
+
+    def embed(self, texts: list[str], query: bool = False) -> list[list[float]]:
+        return self._embedder.embed(texts, query=query)
+
+    def __getattr__(self, name):
+        return getattr(self._llm, name)
+
+
 def make_provider(settings) -> Provider:
+    llm = _make_llm(settings)
+    if getattr(settings, "embed_provider", "gemini") == "voyage":
+        from .voyage import VoyageEmbedder
+        emb = VoyageEmbedder(settings.voyage_api_key, settings.voyage_model, settings.voyage_dim,
+                             settings.voyage_tokens_per_min, settings.voyage_request_tokens)
+        return _ComposedProvider(llm, emb)
+    return llm
+
+
+def _make_llm(settings) -> Provider:
     if settings.provider in ("gemini", "vertex"):
         return GeminiProvider(api_key=settings.gemini_api_key if settings.provider == "gemini" else "",
                               project=settings.gcp_project, location=settings.gcp_location,

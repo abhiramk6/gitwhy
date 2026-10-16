@@ -207,3 +207,41 @@ def test_backup_key_is_used_for_queries_but_not_for_index_unless_allowed():
     g.backup_for_index = True
     assert g.embed(["chunk"], query=False) and backup.calls == 2        # only when the owner allows it
     assert g.generate_json("s", "u", {}) == {"ok": True} and g.usage["backup_calls"] == 3
+
+
+def _voyage(handler, **kw):
+    import httpx
+    from app.models.voyage import VoyageEmbedder
+    return VoyageEmbedder("k", client=httpx.Client(transport=httpx.MockTransport(handler)), **kw)
+
+
+def test_voyage_orders_sizes_and_counts_tokens():
+    import json
+    import httpx
+    seen = []
+
+    def handler(req):
+        body = json.loads(req.content)
+        seen.append(body)
+        assert req.headers["authorization"] == "Bearer k" and body["output_dimension"] == 1024
+        data = [{"index": i, "embedding": [float(len(t))] + [0.0] * 1023} for i, t in enumerate(body["input"])][::-1]  # shuffled
+        return httpx.Response(200, json={"data": data, "usage": {"total_tokens": 7}})
+
+    emb = _voyage(handler, request_tokens=10)             # 30 chars ~ 11 est. tokens each => one text per request
+    out = emb.embed(["a" * 30, "b" * 3, "c" * 30], query=True)
+    assert [v[0] for v in out] == [30.0, 3.0, 30.0] and len(seen) == 3 and seen[0]["input_type"] == "query"
+    assert emb.total_tokens == 21 and emb.calls == 3
+
+
+def test_voyage_429_stops_and_wrong_dimension_fails():
+    import httpx
+    import pytest
+    from app.models.provider import QuotaExhausted
+
+    emb = _voyage(lambda r: httpx.Response(429, headers={"retry-after": "42"}, text="slow down"))
+    with pytest.raises(QuotaExhausted) as e:
+        emb.embed(["x"])
+    assert e.value.retry_after_s == 42 and emb.calls == 1          # one attempt, no retry
+    bad = _voyage(lambda r: httpx.Response(200, json={"data": [{"index": 0, "embedding": [0.1]}], "usage": {}}))
+    with pytest.raises(RuntimeError):
+        bad.embed(["x"])

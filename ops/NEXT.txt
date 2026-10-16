@@ -1,4 +1,7 @@
-Embedding pass 1 (Oct 16 00:05 UTC) was refused with 0 accepted items; next window ~Oct 17 00:00 UTC (scheduler wakes 00:05). No retries.
-Expected: pass Oct 17 = ADRs, facts, issues, ~554 PRs; Oct 18 = rest of PRs + docs (+ some code) -> then dev-only partial B (non-evidential);
-Oct 19 = code; Oct 20 = last code, 3,550/3,550. Then ask owner: freeze prompts, real B, single held-out run. Do nothing before the reply.
-Also: owner's one-time review of agent-confirmed dev lists at the partial-B milestone.
+WAITING for owner's Voyage API key (owner chose Voyage, rejected local OSS embeddings). Then:
+ 1. store in ~/.config/lore/voyage.env (VOYAGE_API_KEY=..., mode 600), never in git/chat.
+ 2. ONE smoke call (voyage-4-large, 3 short texts), note usage.total_tokens and any rate-limit headers; set VOYAGE_TOKENS_PER_MIN from the observed limit.
+ 3. stop the Gemini embed scheduler (ops/embed_schedule.pid) - its corpus is abandoned; keep 832 gemini-embedding-001 vectors unused.
+ 4. run EMBED_PROVIDER=embedding voyage pass: PROVIDER=gemini EMBED_PROVIDER=voyage ORG_SLUG=oss-pallets python -m app.retrieval.embed (tier order, no retries; stops on 429 and records quota_state).
+ 5. report per-tier coverage + real tokens used (usage.total_tokens) vs 200M free; then dev-only partial B once docs tier complete, real B only after 3,550/3,550 AND prompts frozen (owner reply).
+Reports must name the embedding model per corpus (voyage-4-large, 1024-dim) and say OSS results are not predictive of other models.
