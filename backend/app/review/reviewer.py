@@ -54,6 +54,17 @@ def _short(quote: str, limit: int = 280) -> str:
     return q[:cut].strip() if cut else q[:limit].rsplit(" ", 1)[0] + "…"
 
 
+def _trigger(words: str, title: str, body: str, patches: dict, files: list, imports: list) -> dict | None:
+    """Where the model's trigger words literally occur in the PR: an added diff line, the description, the title or a file name."""
+    hit = diffs.locate(patches, words) if patches else None
+    if hit:
+        return {"text": hit[2], "where": "diff", "file": hit[0], "line": hit[1]}
+    for where, text in (("description", body), ("title", title), ("files", "\n".join(files)), ("imports", "\n".join(imports))):
+        if _fits(words, text) and len(_norm(words)) >= 4:
+            return {"text": words.strip(), "where": where}
+    return None
+
+
 def _fits(quote: str, text: str) -> bool:
     q = _norm(quote)
     return bool(q) and q in _norm(text)
@@ -155,7 +166,7 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
             docs.append({"id": eid, "title": h.title, "source": h.source_id, "passage": h.snippet[:1500]})
     packet["runbooks_and_docs"] = docs
     return packet, ev, {"search_mode": meta["mode"], "decision_text": decision_text, "guidance_text": guidance_text,
-                     "files": files, "patches": patches, "earlier": earlier}
+                     "files": files, "patches": patches, "earlier": earlier, "imports": payload.get("adds_imports", [])}
 
 
 def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo: str, number: int) -> dict:
@@ -166,6 +177,7 @@ def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo
     except LLMUnavailable as exc:
         return {"status": "llm_required", "repo": repo, "pr": number, "explanation": str(exc), "comments": []}
     comments, dropped = [], []
+    pr_title, pr_body = packet["pull_request"]["title"], packet["pull_request"]["description"]
     seen = set()
     status_of = {i: it["status"] for i, it in ev.items.items()}
     for c in raw.get("comments", []):
@@ -187,6 +199,13 @@ def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo
             cited = [i for i in ids if i in aux["guidance_text"]]
             if not cited or not any(_fits(c.get("quote", ""), aux["guidance_text"][i]) for i in cited):
                 dropped.append({"reason": "past guidance not cited, or quote not in the reviewer's words",
+                                "comment": c.get("comment", "")[:120]})
+                continue
+        trig = None
+        if ctype in ("decision_violation", "past_guidance"):
+            trig = _trigger(c.get("trigger", ""), pr_title, pr_body, aux["patches"], aux["files"], aux["imports"])
+            if not trig:
+                dropped.append({"reason": "nothing in the PR (title, description or added lines) matches what the earlier words warn against",
                                 "comment": c.get("comment", "")[:120]})
                 continue
         if ctype == "reuse_opportunity" and not any(ev.items[i]["kind"] == "reuse" for i in ids):
@@ -218,7 +237,7 @@ def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo
         seen.add(key)
         src_id = next((i for i in ids if i in aux["earlier"]), None)
         comments.append({"type": ctype, "file": file or None, "comment": c["comment"].strip(),
-                         "why": (c.get("why_conflict") or "").strip() or None,
+                         "why": (c.get("why_conflict") or "").strip() or None, "trigger": trig,
                          "earlier": ({**aux["earlier"][src_id], "id": src_id, "quote": _short(c.get("quote")) or None} if src_id and ctype in
                                      ("decision_violation", "past_guidance", "superseded_reference") else None),
                          "in_pr": ({"file": hit[0], "line": hit[1], "text": hit[2]} if hit else None),

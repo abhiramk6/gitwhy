@@ -33,9 +33,11 @@ function Draft({ r }) {
                   <button type="button" className="pcard" onClick={() => col.open({ id: c.earlier.id, quote: c.earlier.quote, label: reg[c.earlier.id]?.label })}>
                     <span className="pmeta">“ source</span><span className="pq">{c.earlier.quote}</span></button>)}
               </div>
-              {c.in_pr
-                ? <div><div className="small muted">In this PR · <code>{c.in_pr.file}</code> line {c.in_pr.line}</div><pre className="diffline">{c.in_pr.text}</pre></div>
-                : <div className="small muted">In this PR · {c.file ? <><code>{c.file}</code>, file level (the diff does not show a single line for this)</> : 'whole PR'}</div>}
+              {c.trigger?.where === 'diff' || c.in_pr
+                ? (() => { const t = c.trigger?.where === 'diff' ? c.trigger : c.in_pr; return <div><div className="small muted">In this PR · <code>{t.file}</code> line {t.line}</div><pre className="diffline">{t.text}</pre></div> })()
+                : c.trigger
+                  ? <div><div className="small muted">In this PR · {c.trigger.where === 'files' ? 'a changed file' : c.trigger.where === 'imports' ? 'an added import' : `the ${c.trigger.where}`}</div><p className="text" style={{ margin: 0 }}>“{c.trigger.text}”</p></div>
+                  : <div className="small muted">In this PR · {c.file ? <><code>{c.file}</code>, file level</> : 'whole PR'}</div>}
               {c.why && <div><div className="small muted">Why they conflict</div><p className="text" style={{ margin: 0 }}>{c.why}</p></div>}
               <div><div className="small muted">Suggested review comment</div><p className="text" style={{ margin: 0 }}><Hl text={c.comment} k={c.key} /></p></div>
             </div>

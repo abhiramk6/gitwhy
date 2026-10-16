@@ -36,7 +36,7 @@ def test_guard_keeps_supported_comments_and_discards_the_rest(conn, org):
         sup = next((d for d in p["decisions"] if d["status"] == "superseded"), None)
         out = [
             {"type": "decision_violation", "file": p["pull_request"]["files"][0], "evidence": [d4["id"]],
-             "comment": "Outbound HTTP must go through the platform client.",
+             "comment": "Outbound HTTP must go through the platform client.", "trigger": "requests",
              "quote": "Every outbound HTTP call must use `platform_libs.http_client.request`"},
             {"type": "decision_violation", "file": "", "evidence": [d4["id"]],
              "comment": "Invented rule.", "quote": "All calls must be signed with HMAC"},          # quote not in ADR
@@ -128,7 +128,7 @@ def test_past_guidance_needs_the_reviewers_exact_words(conn):
     def responder(p):
         g = p["team_guidance"][0]
         assert g["said_by"] == "priya.raman" and g["date"] == "2026-06-08" and quote in g["exact_words"]
-        base = {"type": "past_guidance", "file": "payments/api.py", "evidence": [g["id"]], "comment": "Use cursors."}
+        base = {"type": "past_guidance", "file": "payments/api.py", "evidence": [g["id"]], "comment": "Use cursors.", "trigger": "offset paging"}
         return {"comments": [{**base, "quote": "Please DON'T add `offset pagination`"},       # formatting/case ignored
                              {**base, "comment": "Invented.", "quote": "never use page numbers anywhere"},
                              {**base, "comment": "No guidance cited.", "evidence": [p["decisions"][0]["id"]],
@@ -153,11 +153,12 @@ def test_line_level_only_where_the_stored_diff_shows_it(conn):
         g = p["team_guidance"][0]
         assert p["diff_available"] and "OFFSET" in p["diff"][0]["changes"]
         base = {"type": "past_guidance", "file": "payments/api.py", "evidence": [g["id"]], "quote": quote, "key": "offset",
-                "why_conflict": "The thread asks for cursors; this change pages by offset."}
+                "why_conflict": "The thread asks for cursors; this change pages by offset.", "trigger": "offset paging"}
         return {"comments": [
             {**base, "comment": "A reviewer asked not to use offset paging.", "diff_quote": "LIMIT %s OFFSET %s"},
             {**base, "comment": "Offset paging again; see line 12.", "diff_quote": ""},                 # claims a line it cannot show
             {**base, "comment": "Different wording, same worry.", "diff_quote": "ORDER BY id DESC"},   # not in the diff -> file-level
+            {**base, "comment": "Unrelated topic.", "diff_quote": "", "trigger": "kubernetes operator"},  # nothing in the PR matches
         ], "nothing_to_say": False}
 
     review = draft_review(conn, org_id, provider(responder), "payments-api", 11)
@@ -165,6 +166,8 @@ def test_line_level_only_where_the_stored_diff_shows_it(conn):
     assert good["in_pr"]["file"] == "payments/api.py" and good["in_pr"]["line"] == 48 and "OFFSET" in good["in_pr"]["text"]
     assert good["earlier"]["who"] == "priya.raman" and good["earlier"]["when"] == "2026-06-08" and good["earlier"]["quote"] and good["why"]
     assert any("does not show" in d["reason"] for d in review["dropped"])
+    assert any("nothing in the PR" in d["reason"] for d in review["dropped"]) and len(review["comments"]) == 2
+    assert good["trigger"]["where"] == "diff" and good["trigger"]["line"] == 48 or good["trigger"]["where"] == "description"
     assert [c["in_pr"] for c in review["comments"][1:]] == [None]
 
 

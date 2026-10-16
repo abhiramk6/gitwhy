@@ -51,7 +51,7 @@ await run('trace', async () => {
 })
 await run('impact', async () => {
   await page.goto(BASE + '/#/impact'); await page.waitForSelector('.chip'); await page.fill('#iq', 'If I change the ledger-core service, what else could break?'); await page.click('button:has-text("Check")')
-  await page.waitForSelector('.dmap', { timeout: 180000 }); await shot('09-impact')
+  await page.waitForSelector('.dmap', { timeout: 180000 }); await shot('09-impact'); await page.locator('.dmap').scrollIntoViewIfNeeded(); await page.evaluate(() => window.scrollBy(0, 300)); await shot('09b-impact-map')
 })
 await run('results', async () => { await page.goto(BASE + '/#/results'); await page.waitForSelector('.tbl'); await shot('10-results') })
 await run('sources', async () => { await page.goto(BASE + '/#/sources'); await page.waitForSelector('.tbl'); await shot('08-sources') })

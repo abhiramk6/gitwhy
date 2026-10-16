@@ -328,16 +328,16 @@ PR_REVIEW = {
         "diff only when 'diff_available' is true: then 'diff' lists the added (N+) and removed (-) lines of each file with new-file line numbers. "
         "You may point at code only by copying one ADDED line, or a stretch of it, exactly into 'diff_quote' (leave it empty otherwise); "
         "choose the added line that best shows the conflict (for example the query or call that does the thing the earlier words warn against); never write a line number yourself and never describe code you were not shown. `file` must be one of the "
-        "changed files or empty; for decision_violation and past_guidance also give 'why_conflict': one short sentence saying how this "
+        "changed files or empty; for decision_violation and past_guidance also give 'trigger': the exact words, copied from the pull request title, its description or an added diff line, that show the change does what the earlier words warn against (if you cannot copy such words from the pull request, there is no comment to make: leave it out), and 'why_conflict': one short sentence saying how this "
         "change and the earlier statement conflict (what the earlier words ask for, what the change does); (10) every comment has 'key': the most important phrase (at most 8 words) copied "
         "exactly from the comment's own text; (11) keep each comment to at most two short sentences (about 40 words): name who said it and when, and say what to do; never paste the quoted source words into the comment, they go in 'quote'."),
     "schema": {"type": "object", "properties": {
         "comments": {"type": "array", "items": {"type": "object", "properties": {
             "type": {"type": "string"}, "file": {"type": "string"}, "comment": {"type": "string"},
             "quote": {"type": "string"}, "key": {"type": "string"},
-            "diff_quote": {"type": "string"}, "why_conflict": {"type": "string"},
+            "diff_quote": {"type": "string"}, "why_conflict": {"type": "string"}, "trigger": {"type": "string"},
             "evidence": {"type": "array", "items": {"type": "string"}}},
-            "required": ["type", "file", "comment", "quote", "key", "diff_quote", "why_conflict", "evidence"]}},
+            "required": ["type", "file", "comment", "quote", "key", "diff_quote", "why_conflict", "trigger", "evidence"]}},
         "nothing_to_say": {"type": "boolean"}},
         "required": ["comments", "nothing_to_say"]},
 }
