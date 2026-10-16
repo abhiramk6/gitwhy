@@ -32,7 +32,8 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 /* shell: top bar, work surface, provenance column */
-.app { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
+.app { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr); }
+.top { min-width: 0; }
 .top { display: flex; align-items: center; gap: 22px; padding: 0 22px; height: 52px; border-bottom: 1px solid var(--rule); background: var(--paper); position: sticky; top: 0; z-index: 5; }
 .brand { font: 700 19px var(--display); letter-spacing: -.02em; display: flex; align-items: baseline; gap: 8px; }
 .brand small { font: 400 12.5px var(--ui); color: var(--slate); letter-spacing: 0; }
