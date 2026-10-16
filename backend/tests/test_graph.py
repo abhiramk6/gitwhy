@@ -133,3 +133,19 @@ def test_reuse_pairs_must_span_repositories_and_exist(conn):
     build(conn, org_id, ideal_provider(reuse_pairs=lambda p: {"pairs": [
         {"existing": "x:a.py::A", "duplicate": "x:b.py::B", "reason": "unknown ids"}]}))
     assert _facts(conn, "reuse") == []
+
+
+def test_unknown_real_world_jira_link_types_do_not_break_the_build(conn):
+    import json
+    from pathlib import Path
+    from app.ingestion.fixtures import ingest
+    from app.knowledge.build_graph import build
+    from tests.fake_model import ideal_provider
+    org, _ = ingest(conn, Path(__file__).resolve().parents[2] / "fixtures" / "northwind")
+    rows = conn.execute("SELECT id, payload FROM source_records WHERE organization_id=%s AND source_type='jira_issue' ORDER BY id LIMIT 2", (org,)).fetchall()
+    a, b = rows[0], rows[1]
+    p = a["payload"]; p["links"] = [{"key": b["payload"]["key"], "type": "is-blocked-by"}, {"key": b["payload"]["key"], "type": "duplicates"}]
+    conn.execute("UPDATE source_records SET payload=%s::jsonb WHERE id=%s", (json.dumps(p), a["id"]))
+    build(conn, org, ideal_provider(choose=lambda x: []))
+    rels = {r["rel_type"] for r in conn.execute("SELECT rel_type FROM edges WHERE organization_id=%s", (org,))}
+    assert {"blocked_by", "relates_to"} <= rels

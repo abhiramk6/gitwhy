@@ -134,3 +134,17 @@ details.evidence[open] > summary { margin-bottom: 16px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
 .turn { display: block; }
+
+/* welcome + onboarding */
+.welcome { min-height: 100dvh; display: grid; place-items: start center; padding: 64px 24px; background: var(--page); }
+.welcome-in { width: 100%; max-width: 560px; }
+.steps { list-style: none; display: flex; gap: 8px; padding: 0; margin: 0; flex-wrap: wrap; }
+.steps li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--slate); padding: 4px 12px 4px 4px; border-radius: var(--radius); }
+.steps li span { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--raised); font-size: 13px; font-weight: 600; }
+.steps li.on { color: var(--ink); font-weight: 500; } .steps li.on span { background: var(--accent); color: #fff; } .steps li.done span { background: var(--accent-wash); color: var(--accent); }
+.checks { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; border: 1px solid var(--rule); border-radius: var(--radius); }
+.checks li { border-bottom: 1px solid var(--rule); } .checks li:last-child { border-bottom: 0; }
+.checks label { display: flex; gap: 12px; align-items: flex-start; padding: 12px 20px; cursor: pointer; } .checks input { margin-top: 5px; accent-color: var(--accent); width: 16px; height: 16px; }
+.stages { list-style: none; margin: 0; padding: 0; } .stages li { display: grid; grid-template-columns: 20px 1fr auto; gap: 12px; align-items: start; padding: 16px 0; border-top: 1px solid var(--rule); }
+.stages li .dot { margin-top: 7px; } .dot.pending { background: var(--rule); }
+.org-switch { background: var(--raised); border: 0; border-radius: var(--radius); padding: 4px 28px 4px 14px; font: inherit; font-size: 13px; color: var(--ink); width: auto; max-width: 220px; }

@@ -125,6 +125,9 @@ def _layout(path: str) -> tuple[str, str] | None:
     return None
 
 
+LINK_REL = {"blocked-by": "blocked_by", "is-blocked-by": "blocked_by", "blocks": "blocks", "relates-to": "relates_to"}
+
+
 def build(conn: psycopg.Connection, org_id: int, provider=None) -> BuildStats:
     b = Builder(conn, org_id)
     files = _records(conn, org_id, "file")
@@ -256,7 +259,7 @@ def build(conn: psycopg.Connection, org_id: int, provider=None) -> BuildStats:
         t = rec["payload"]
         for l in t.get("links", []):
             if l["key"] in tickets:
-                rel = {"blocked-by": "blocked_by", "blocks": "blocks", "relates-to": "relates_to"}[l["type"]]
+                rel = LINK_REL.get(l["type"], "relates_to")  # real Jira has many link types; unknown ones are plain relations
                 b.edge(tickets[t["key"]], tickets[l["key"]], rel, "explicit", rec["source_url"] or t["key"],
                        source_record_id=rec["id"])
         blocked = [x["key"] for x in t.get("links", []) if x["type"] == "blocks" and x["key"] in tickets]

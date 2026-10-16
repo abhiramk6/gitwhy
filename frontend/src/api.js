@@ -3,10 +3,21 @@ const TOKEN_KEY = 'gitwhy_demo_token'
 export const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || '' } catch { return '' } }
 export const setToken = (t) => { try { localStorage.setItem(TOKEN_KEY, t) } catch { /* private mode */ } }
 
+const SESSION_KEY = 'gitwhy_session'
+const ORG_KEY = 'gitwhy_org'
+export const getSession = () => { try { return localStorage.getItem(SESSION_KEY) || '' } catch { return '' } }
+export const setSession = (t) => { try { t ? localStorage.setItem(SESSION_KEY, t) : localStorage.removeItem(SESSION_KEY) } catch { /* private mode */ } }
+export const getOrg = () => { try { return localStorage.getItem(ORG_KEY) || '' } catch { return '' } }
+export const setOrg = (o) => { try { o ? localStorage.setItem(ORG_KEY, o) : localStorage.removeItem(ORG_KEY) } catch { /* private mode */ } }
+
 async function request(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
   const token = getToken()
   if (token) headers['X-Demo-Token'] = token
+  const session = getSession()
+  if (session) headers.Authorization = `Bearer ${session}`
+  const org = getOrg()
+  if (org) headers['X-Org'] = org
   const res = await fetch(path, { ...opts, headers })
   if (!res.ok) {
     let detail = res.statusText
@@ -19,6 +30,16 @@ async function request(path, opts = {}) {
 }
 
 export const api = {
+  meta: () => request('/api/meta'),
+  signup: (b) => request('/api/auth/signup', { method: 'POST', body: JSON.stringify(b) }),
+  login: (b) => request('/api/auth/login', { method: 'POST', body: JSON.stringify(b) }),
+  me: () => request('/api/auth/me'),
+  createOrg: (name) => request('/api/orgs', { method: 'POST', body: JSON.stringify({ name }) }),
+  testGithub: (token, owner) => request('/api/connections/github/test', { method: 'POST', body: JSON.stringify({ token, owner }) }),
+  testJira: (site, email, token) => request('/api/connections/jira/test', { method: 'POST', body: JSON.stringify({ site, email, token }) }),
+  saveConnections: (slug, b) => request(`/api/orgs/${slug}/connections`, { method: 'PUT', body: JSON.stringify(b) }),
+  startSync: (slug) => request(`/api/orgs/${slug}/sync`, { method: 'POST' }),
+  syncStatus: (slug) => request(`/api/orgs/${slug}/sync`),
   overview: () => request('/api/overview'),
   sources: () => request('/api/sources'),
   ingestion: () => request('/api/ingestion'),

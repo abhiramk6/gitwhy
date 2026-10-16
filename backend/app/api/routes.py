@@ -6,7 +6,8 @@ from pydantic import BaseModel, Field
 
 from ..models.provider import Provider
 from . import service
-from .deps import get_conn, get_org_id, get_provider, require_write
+from ..config import Settings
+from .deps import get_conn, get_org_id, get_provider, require_write, settings_dep
 
 router = APIRouter(prefix="/api")
 
@@ -265,6 +266,6 @@ def archaeology_explain(repo: str = Query(min_length=1), path: str = Query(min_l
 
 
 @router.get("/meta")
-def meta():
+def meta(settings: Settings = Depends(settings_dep)):
     from ..product import product
-    return product()
+    return {**product(), "auth": settings.auth_required}

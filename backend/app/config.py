@@ -32,6 +32,16 @@ class Settings(BaseSettings):
     # Free-tier embedding cap is 1,000 items/day/model: index at most this many per day, reserve the rest for queries.
     embed_daily_budget: int = 900
     embed_query_reserve: int = 100
+    # Accounts and onboarding. With auth_required=false (default) the app serves the single configured org with no login.
+    auth_required: bool = False
+    session_secret: str = ""            # prefer GITWHY_SESSION_SECRET or the generated file in secrets_dir
+    secrets_dir: str = "~/.config/gitwhy/org-secrets"  # per-organization tokens (mode 600); production: Secret Manager
+    llm_calls_per_hour: int = 60        # per signed-in user, on endpoints that call a model
+    sync_embed: bool = False            # embed during an organization's sync (slow on free-tier model quotas)
+    sync_max_prs: int = 150
+    sync_max_issues: int = 150
+    sync_max_threads: int = 100
+    sync_max_commits: int = 300
     # Embeddings may come from a different provider than generation. "voyage" = Voyage AI (free 200M tokens/account).
     # Voyage dims are 256/512/1024/2048 (not 768); a new model means a new corpus, never mixed with another model's vectors.
     embed_provider: str = "gemini"
