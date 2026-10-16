@@ -1,1 +1,4 @@
-Wire dev scoring (agent-confirmed lists, labelled); run PR-review drafts on more dev PRs; dev-only partial B after the docs tier completes (about Oct 17 00:05 UTC).
+Embedding pass 1 (Oct 16 00:05 UTC) was refused with 0 accepted items; next window ~Oct 17 00:00 UTC (scheduler wakes 00:05). No retries.
+Expected: pass Oct 17 = ADRs, facts, issues, ~554 PRs; Oct 18 = rest of PRs + docs (+ some code) -> then dev-only partial B (non-evidential);
+Oct 19 = code; Oct 20 = last code, 3,550/3,550. Then ask owner: freeze prompts, real B, single held-out run. Do nothing before the reply.
+Also: owner's one-time review of agent-confirmed dev lists at the partial-B milestone.
