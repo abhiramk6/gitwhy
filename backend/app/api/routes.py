@@ -16,6 +16,16 @@ class PlanRequest(BaseModel):
     depth: int = Field(default=3, ge=1, le=5)
 
 
+class AskTurn(BaseModel):
+    question: str = Field(default="", max_length=1000)
+    text: str = Field(default="", max_length=4000)
+
+
+class AskBody(BaseModel):
+    question: str = Field(min_length=3, max_length=1000)
+    history: list[AskTurn] = Field(default_factory=list, max_length=6)
+
+
 class RememberBody(BaseModel):
     text: str = Field(min_length=3, max_length=2000)
     author: str = Field(min_length=1, max_length=80)
@@ -124,3 +134,12 @@ def plan_status(plan_id: int, body: PlanStatusBody, conn: psycopg.Connection = D
     if not r:
         raise HTTPException(404, "plan not found")
     return r
+
+
+@router.post("/ask", dependencies=[Depends(require_write)])
+def ask(body: AskBody, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
+        provider: Provider = Depends(get_provider)):
+    from ..ask.ask import ask as run_ask
+    out = run_ask(conn, org, provider, body.question, [t.model_dump() for t in body.history])
+    conn.commit()
+    return out

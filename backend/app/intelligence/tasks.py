@@ -149,6 +149,27 @@ REVIEW_GUIDANCE = {
         "required": ["id", "topic", "guidance", "scope", "reason", "quote"]}}}, "required": ["guidance"]},
 }
 
+ASK = {
+    "system": (
+        "You answer an engineer's question about THEIR organization using only the numbered evidence you are given "
+        "(decisions, review comments, pull requests, tickets, docs, code, derived facts). Rules: (1) every statement "
+        "you write must cite one or more evidence ids from the list; a statement you cannot support is left out; "
+        "(2) a decision whose status is 'superseded' is history, not guidance: say it was replaced if relevant, never "
+        "present it as current; (3) when a review comment or thread explains WHY something is done, say who said it and "
+        "when (the evidence carries author and date) and cite it; (4) if sources disagree, say so and cite both; "
+        "(5) if the evidence does not answer the question, set sufficient=false, say what is missing in one sentence "
+        "and suggest what to look for: do not guess; (6) short plain sentences, no preamble; (7) follow_ups: up to "
+        "three natural next questions the evidence could answer. Earlier turns, when given, are context only and are "
+        "not evidence."),
+    "schema": {"type": "object", "properties": {
+        "sufficient": {"type": "boolean"},
+        "answer": {"type": "array", "items": {"type": "object", "properties": {
+            "text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}}},
+            "required": ["text", "cites"]}},
+        "follow_ups": {"type": "array", "items": {"type": "string"}}},
+        "required": ["sufficient", "answer", "follow_ups"]},
+}
+
 PR_REVIEW = {
     "system": (
         "You draft code-review comments for ONE pull request from team knowledge only. You are given the pull "
