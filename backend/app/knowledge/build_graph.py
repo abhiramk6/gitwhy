@@ -319,7 +319,8 @@ def build(conn: psycopg.Connection, org_id: int, provider=None) -> BuildStats:
         author, n = cnt.most_common(1)[0]
         if tot >= cfg.ownership_min_commits and n / tot >= cfg.ownership_min_share and f"{repo}:{f}" in mod:
             b.fact("ownership", "single_dominant_contributor", f"{repo}:{f}",
-                   f"{author} authored {n}/{tot} commits ({n / tot:.0%}) to {repo}/{f}; bus-factor risk.",
+                   f"{author} authored {n}/{tot} commits ({n / tot:.0%}) to {repo}/{f} "
+                   f"(recorded because commits >= {cfg.ownership_min_commits} and share >= {cfg.ownership_min_share:.0%}).",
                    "structural", "active", "github_commit", f"{repo}:{f}", None, 0.95,
                    subject=mod[f"{repo}:{f}"], repo=repo, scope="repo")
     pr_last = defaultdict(str)

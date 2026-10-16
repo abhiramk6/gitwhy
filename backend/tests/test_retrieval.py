@@ -4,7 +4,7 @@ import pytest
 
 from app.ingestion.fixtures import ingest
 from app.knowledge.build_graph import build
-from app.models.provider import EMBED_DIM, OfflineProvider
+from app.models.provider import LLMUnavailable, EMBED_DIM, OfflineProvider
 from app.retrieval.chunk import chunk_spans
 from app.retrieval.embed import embed_org
 from app.retrieval.search import search, search_with_meta
@@ -45,7 +45,8 @@ def test_every_chunk_is_embedded_and_cached(conn, org):
 def test_offline_provider_embeds_nothing_and_says_so(conn, org):
     r = embed_org(conn, org, OfflineProvider())
     assert r["embedded"] == 0 and "no semantic embeddings" in r["skipped"]
-    assert len(OfflineProvider().embed(["a"])[0]) == EMBED_DIM
+    with pytest.raises(LLMUnavailable):                      # no fake vectors: embedding without a model is an error
+        OfflineProvider().embed(["a"])
 
 
 def test_offline_search_is_lexical_and_exact_ids_win(conn, org):

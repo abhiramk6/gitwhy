@@ -7,7 +7,6 @@ Two capabilities, reported honestly:
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import re
@@ -16,7 +15,6 @@ from typing import Protocol
 
 EMBED_DIM = 768
 CHARS_PER_TOKEN = 3.0  # conservative over-estimate used for request sizing and spend caps
-_TOKEN = re.compile(r"[a-z0-9_+\-]+")
 
 
 class LLMUnavailable(RuntimeError):
@@ -42,25 +40,16 @@ class Provider(Protocol):
 
 
 class OfflineProvider:
-    """No model. `embed` is a deterministic lexical n-gram hash kept only so the vector plumbing is testable;
-    `semantic_embeddings` is False, so search never uses it as a relevance signal."""
+    """No model configured. Nothing here pretends to be intelligence: there are no vectors (embedding raises),
+    `semantic_embeddings` is False so search is lexical only, and every judgment raises `LLMUnavailable` unless a
+    cached judgment exists (replay)."""
     name = "offline"
-    embed_model = "offline-hash-768"
+    embed_model = "none"
     has_llm = False
     semantic_embeddings = False
 
     def embed(self, texts: list[str], query: bool = False) -> list[list[float]]:
-        return [self._vec(t) for t in texts]
-
-    @staticmethod
-    def _vec(text: str) -> list[float]:
-        toks = _TOKEN.findall(text.lower())
-        v = [0.0] * EMBED_DIM
-        for f in toks + [f"{a}_{b}" for a, b in zip(toks, toks[1:])]:
-            h = int.from_bytes(hashlib.sha1(f.encode()).digest()[:8], "big")
-            v[h % EMBED_DIM] += 1.0 if (h >> 63) & 1 else -1.0
-        n = math.sqrt(sum(x * x for x in v)) or 1.0
-        return [x / n for x in v]
+        raise LLMUnavailable("no embedding model configured (set PROVIDER=gemini or vertex, and EMBED_PROVIDER)")
 
     def generate_json(self, system: str, user: str, schema: dict) -> dict:
         raise LLMUnavailable("no LLM configured (set PROVIDER=gemini with GEMINI_API_KEY, or PROVIDER=vertex)")
