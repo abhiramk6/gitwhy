@@ -3,6 +3,23 @@ import { api } from '../api.js'
 import { Hl, Problem, Proof, Reading, Tags, copyText, spanLine, useTagMeta } from '../ui.jsx'
 import { useAsync } from '../components.jsx'
 
+function Rate({ id }) {
+  const [state, setState] = useState(null)
+  const [onb, setOnb] = useState(false)
+  if (!id) return null
+  const send = async (correct) => { try { await api.feedback({ event_id: id, resolved: correct === 'yes', correct, onboarding: onb }); setState('done') } catch { setState('error') } }
+  if (state === 'done') return <p className="small muted">Thanks, recorded.</p>
+  return (
+    <div className="row small" style={{ gap: 12, flexWrap: 'wrap' }}>
+      <span className="muted">Did this answer your question?</span>
+      <button className="btn quiet small" onClick={() => send('yes')}>Yes, correct</button>
+      <button className="btn quiet small" onClick={() => send('no')}>No, wrong or unhelpful</button>
+      <label className="muted"><input type="checkbox" checked={onb} onChange={(e) => setOnb(e.target.checked)} /> I'm new here (onboarding question)</label>
+      {state === 'error' && <span className="muted">Could not save that.</span>}
+    </div>
+  )
+}
+
 function Answer({ res }) {
   const ids = (res.citations || []).map((c) => c.id)
   const meta = useTagMeta(ids)
@@ -32,6 +49,7 @@ function Answer({ res }) {
           <ul>{res.dropped.map((d, i) => <li key={i}>{d.text}</li>)}</ul></details>
       )}
       {res.answer.length > 0 && <div><button className="btn quiet small" onClick={() => copyText(md)}>Copy with sources</button></div>}
+      {res.answer.length > 0 && <Rate id={res.event_id} />}
     </div>
   )
 }

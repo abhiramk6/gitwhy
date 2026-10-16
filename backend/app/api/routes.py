@@ -1,3 +1,4 @@
+import time
 from typing import Literal
 
 import psycopg
@@ -7,7 +8,7 @@ from pydantic import BaseModel, Field
 from ..models.provider import Provider
 from . import service
 from ..config import Settings
-from .deps import get_conn, get_org_id, get_provider, require_write, settings_dep
+from .deps import get_conn, get_org_id, get_provider, optional_user_id, require_write, settings_dep
 
 router = APIRouter(prefix="/api")
 
@@ -25,6 +26,20 @@ class AskTurn(BaseModel):
 class AskBody(BaseModel):
     question: str = Field(min_length=3, max_length=1000)
     history: list[AskTurn] = Field(default_factory=list, max_length=6)
+
+
+class FeedbackBody(BaseModel):
+    event_id: int
+    resolved: bool
+    correct: Literal["yes", "no", "unsure"]
+    onboarding: bool = False
+
+
+class TimedTaskBody(BaseModel):
+    task: str = Field(min_length=3, max_length=300)
+    arm: Literal["manual", "gitwhy"]
+    seconds: float = Field(ge=0, lt=86400)
+    found: bool
 
 
 class RememberBody(BaseModel):
@@ -139,11 +154,40 @@ def plan_status(plan_id: int, body: PlanStatusBody, conn: psycopg.Connection = D
 
 @router.post("/ask", dependencies=[Depends(require_write)])
 def ask(body: AskBody, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
-        provider: Provider = Depends(get_provider)):
+        provider: Provider = Depends(get_provider), uid: int | None = Depends(optional_user_id)):
     from ..ask.ask import ask as run_ask
+    from ..metrics import metrics
+    t0 = time.perf_counter()
     out = run_ask(conn, org, provider, body.question, [t.model_dump() for t in body.history])
+    out["event_id"] = metrics.record(conn, org, uid, "ask", int((time.perf_counter() - t0) * 1000), metrics.ask_detail(out))
     conn.commit()
     return out
+
+
+@router.post("/feedback", dependencies=[Depends(require_write)])
+def feedback(body: FeedbackBody, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
+             uid: int | None = Depends(optional_user_id)):
+    from ..metrics import metrics
+    if not metrics.feedback(conn, org, uid, body.event_id, body.resolved, body.correct, body.onboarding):
+        raise HTTPException(404, "answer not found")
+    conn.commit()
+    return {"ok": True}
+
+
+@router.post("/timed-tasks", dependencies=[Depends(require_write)])
+def timed_task(body: TimedTaskBody, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
+               uid: int | None = Depends(optional_user_id)):
+    from ..metrics import metrics
+    metrics.record_timed(conn, org, uid, body.task, body.arm, body.seconds, body.found)
+    conn.commit()
+    return metrics.timed_comparison(conn, org)
+
+
+@router.get("/results")
+def results(assumed_minutes: float | None = Query(default=None, ge=0, le=600), conn: psycopg.Connection = Depends(get_conn),
+            org: int = Depends(get_org_id)):
+    from ..metrics import metrics
+    return metrics.summary(conn, org, assumed_minutes)
 
 
 @router.get("/people")
@@ -163,9 +207,13 @@ def person(login: str, conn: psycopg.Connection = Depends(get_conn), org: int = 
 
 @router.post("/people/{login}/handover", dependencies=[Depends(require_write)])
 def handover(login: str, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
-             provider: Provider = Depends(get_provider)):
+             provider: Provider = Depends(get_provider), uid: int | None = Depends(optional_user_id)):
+    from ..metrics import metrics
     from ..people.people import handover as run
+    t0 = time.perf_counter()
     out = run(conn, org, provider, login)
+    if out.get("status") != "unknown_person":
+        metrics.record(conn, org, uid, "handover", int((time.perf_counter() - t0) * 1000), {"status": out.get("status"), "person": login})
     conn.commit()
     if out["status"] == "unknown_person":
         raise HTTPException(404, "person not found")
@@ -208,13 +256,17 @@ def prs(limit: int = Query(default=60, ge=1, le=200), conn: psycopg.Connection =
 
 @router.post("/prs/{repo}/{number}/review", dependencies=[Depends(require_write)])
 def review_pr(repo: str, number: int, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
-              provider: Provider = Depends(get_provider)):
+              provider: Provider = Depends(get_provider), uid: int | None = Depends(optional_user_id)):
     """Draft review comments for a PR. Returned to the caller only: nothing is written to GitHub or any external service."""
+    from ..metrics import metrics
     from ..review.reviewer import draft_review
+    t0 = time.perf_counter()
     try:
         out = draft_review(conn, org, provider, repo, number)
     except LookupError as exc:
         raise HTTPException(404, str(exc))
+    if out.get("status") == "draft":
+        metrics.record(conn, org, uid, "review", int((time.perf_counter() - t0) * 1000), metrics.review_detail(out, repo, number))
     conn.commit()
     return out
 
