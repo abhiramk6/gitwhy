@@ -288,7 +288,8 @@ def make_provider(settings) -> Provider:
     if getattr(settings, "embed_provider", "gemini") == "voyage":
         from .voyage import VoyageEmbedder
         emb = VoyageEmbedder(settings.voyage_api_key, settings.voyage_model, settings.voyage_dim,
-                             settings.voyage_tokens_per_min, settings.voyage_request_tokens)
+                             settings.voyage_tokens_per_min, settings.voyage_request_tokens,
+                             settings.voyage_requests_per_min)
         return _ComposedProvider(llm, emb)
     return llm
 

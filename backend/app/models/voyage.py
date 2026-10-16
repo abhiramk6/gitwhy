@@ -17,16 +17,23 @@ URL = "https://api.voyageai.com/v1/embeddings"
 
 class VoyageEmbedder:
     def __init__(self, api_key: str, model: str = "voyage-4-large", dim: int = 1024, tokens_per_min: int = 0,
-                 request_tokens: int = 20000, timeout_s: float = 60.0, client: httpx.Client | None = None):
+                 request_tokens: int = 20000, requests_per_min: int = 0, timeout_s: float = 60.0, client: httpx.Client | None = None):
         self.api_key, self.embed_model, self.dim = api_key, model, dim
-        self.tokens_per_min, self.request_tokens = tokens_per_min, request_tokens
+        self.tokens_per_min, self.request_tokens, self.requests_per_min = tokens_per_min, request_tokens, requests_per_min
         self.client = client or httpx.Client(timeout=timeout_s)
         self.total_tokens = 0       # as billed/counted by the API (usage.total_tokens)
         self.calls = 0
         self._window: list[tuple[float, int]] = []
 
     def _pace(self, tokens: int) -> None:
+        if self.requests_per_min and self._window:      # keep requests evenly spaced under the RPM limit
+            gap = 60.0 / self.requests_per_min + 1.0
+            wait = gap - (time.monotonic() - self._window[-1][0])
+            if wait > 0:
+                time.sleep(wait)
         if not self.tokens_per_min:
+            if self.requests_per_min:
+                self._window = [(time.monotonic(), tokens)]
             return
         now = time.monotonic()
         self._window = [(t, n) for t, n in self._window if now - t < 60]

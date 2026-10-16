@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     voyage_dim: int = 1024
     voyage_tokens_per_min: int = 0      # 0 = unpaced; set from the observed account limit
     voyage_request_tokens: int = 20000  # estimated tokens per request
+    voyage_requests_per_min: int = 0
     # Paid tier (only after the owner enabled billing): no daily item cap, but a hard dollar cap on estimated spend.
     # Tokens are over-estimated (3 chars/token), so the real bill is at or below the estimate.
     embed_paid: bool = False

@@ -193,7 +193,11 @@ def main() -> int:
     prov = make_provider(s)
     with connect() as conn:
         org = conn.execute("SELECT id FROM organizations WHERE slug=%s", (s.org_slug,)).fetchone()["id"]
-        if s.embed_paid:  # no item cap on the paid tier; the dollar cap is the guard
+        if s.embed_provider == "voyage":  # free 200M-token allowance; limits are per-minute, paced by the embedder
+            budget = a.budget
+            res = embed_org(conn, org, prov, budget=budget)
+            res["voyage_tokens_billed"] = getattr(prov, "_embedder", prov).total_tokens
+        elif s.embed_paid:  # no item cap on the paid tier; the dollar cap is the guard
             budget = a.budget
             res = embed_org(conn, org, prov, budget=budget, max_usd=s.embed_max_usd, price_per_mtok=s.embed_price_per_mtok)
             res["est_spend_usd"] = round(est_spend_tokens(conn, prov.embed_model) * s.embed_price_per_mtok / 1e6, 4)

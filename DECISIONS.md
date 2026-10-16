@@ -4,7 +4,7 @@ One line per non-trivial decision: what, and why. Newest first. Owner-pending it
 repeated (not re-sent) in each hourly update until answered.
 
 ## Waiting on owner
-- **Voyage API key (asked 2026-10-16 ~01:20 UTC):** owner chose C (Voyage AI) and rejected the local open-source option (quality, no compute). Need him to sign up at dash.voyageai.com and send an API key. Plan after key: voyage-4-large for the OSS corpus only. No card unless the no-card rate limit proves too low.
+_(Voyage key received 2026-10-16 05:25 UTC; nothing waiting on the owner for embeddings.)_
 
 _nothing else blocking._ (Owner asked about paid-tier embedding cost; estimate sent, ~$0.25 for 3,550 chunks; awaiting his explicit yes before any billing change. Plan A continues meanwhile.)
 
@@ -12,6 +12,7 @@ Also, one-time ask at the next milestone (dev-only partial B): review of the OSS
 `excluded_subjects`, which are **agent-confirmed, not human-reviewed**.
 
 ## Log (UTC, server clock)
+- 2026-10-16 05:35 — Voyage key received (stored ~/.config/lore/voyage.env, mode 600; owner will rotate). Smoke call OK (voyage-4-large, 1024-dim). Account has NO card => reduced limits 3 RPM / ~10K TPM (observed 429 on the 3rd request in a burst; probe, not a retry loop). Embedder paces to 3 RPM and 9K estimated tokens/min, ~3,000-token requests; est. 3-4 h for all 3,550 chunks (≈1.8M tokens, ~1% of the 200M free). Gemini embedding scheduler STOPPED (corpus abandoned; 832 gemini-embedding-001 vectors kept, unused, never mixed). Voyage pass runs as ONE pass in tmux lore:voyage (ops/embed_voyage.sh), a 429 stops it and records it, no retry. Old session crons for Oct 17/18/20 replaced. Owner also said: use both Gemini keys (primary + backup) for generation: already wired (backup used on primary failure).
 - 2026-10-16 01:20 — Owner chose option C (Voyage AI) and ruled out local open-source embeddings. Verified on docs.voyageai.com: 200M free tokens per account (voyage-4 family), corpus is ~1.8M tokens. Waiting for his API key; code prep in the meantime (new embedding model => new corpus, never mixed with gemini-embedding-001).
 - 2026-10-16 01:00 — Owner asked to switch embeddings off Gemini (Pinecone or similar with credits). Pinecone is a vector DB, not a model; asked which embedding source he wants (A/B/C), recommended B (local open-source; server has 1 CPU/3 GB). Changing embedding model/defaults needs his answer, so nothing is changed; Plan A free-tier schedule continues; paid mode stays off.
 - 2026-10-16 00:50 — Owner said YES to paid Gemini embeddings, with spend monitored ("not cost a dollar"). Read as: stay well under $1. Built a hard guard first: EMBED_PAID=1 removes the 1,000/day item cap, EMBED_MAX_USD=0.50 is a cumulative estimated-spend cap (tokens over-estimated at 3 chars/token, ledger table embed_spend, survives restarts, never exceeded; tested). Estimated cost of the remaining 2,718 chunks ≈ $0.2. The paid run is NOT started until the owner confirms billing is enabled on the primary key's project (only he can do that in the console; I cannot and must not click Upgrade). Plan A schedule keeps running until then; once paid works it is superseded. Backup key stays off for the index.
