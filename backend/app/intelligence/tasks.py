@@ -170,6 +170,28 @@ ASK = {
         "required": ["sufficient", "answer", "follow_ups"]},
 }
 
+HANDOVER = {
+    "system": (
+        "You write a handover brief for ONE engineer who is leaving or changing teams, so a successor can take over. "
+        "You are given a packet of numbered evidence about this person only: code areas with their commit share, "
+        "pull requests they wrote, reviews and comments they gave, guidance they set, tickets assigned, ownership "
+        "facts, and other people who worked on the same areas. Rules: (1) every item must cite evidence ids from "
+        "the packet; an item you cannot support is left out; (2) 'only_they_know': areas or topics where the evidence "
+        "shows this person is the main or only source of knowledge (say why, using the numbers in the evidence); "
+        "(3) 'standards_they_set': guidance they gave in reviews that the successor must keep applying; (4) "
+        "'open_work': unfinished tickets or follow-ups they own; (5) 'people_to_ask': other people who touched the "
+        "same areas, with what to ask them; (6) 'risks': what breaks or gets lost if nothing is done, concrete; "
+        "(7) 'first_week': at most five concrete actions for the successor; (8) never invent names, files or numbers; "
+        "(9) say nothing rather than guess: empty lists are fine; (10) one or two plain sentences per item."),
+    "schema": {"type": "object", "properties": {"summary": {"type": "string"},
+        **{k: {"type": "array", "items": {"type": "object", "properties": {
+            "text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}}},
+            "required": ["text", "cites"]}} for k in
+           ("only_they_know", "standards_they_set", "open_work", "people_to_ask", "risks", "first_week")}},
+        "required": ["summary", "only_they_know", "standards_they_set", "open_work", "people_to_ask", "risks",
+                     "first_week"]},
+}
+
 PR_REVIEW = {
     "system": (
         "You draft code-review comments for ONE pull request from team knowledge only. You are given the pull "

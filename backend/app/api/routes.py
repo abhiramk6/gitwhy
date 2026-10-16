@@ -143,3 +143,29 @@ def ask(body: AskBody, conn: psycopg.Connection = Depends(get_conn), org: int = 
     out = run_ask(conn, org, provider, body.question, [t.model_dump() for t in body.history])
     conn.commit()
     return out
+
+
+@router.get("/people")
+def people(conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id)):
+    from ..people.people import roster
+    return roster(conn, org)
+
+
+@router.get("/people/{login}")
+def person(login: str, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id)):
+    from ..people.people import profile
+    p = profile(conn, org, login)
+    if not p:
+        raise HTTPException(404, "person not found")
+    return p
+
+
+@router.post("/people/{login}/handover", dependencies=[Depends(require_write)])
+def handover(login: str, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
+             provider: Provider = Depends(get_provider)):
+    from ..people.people import handover as run
+    out = run(conn, org, provider, login)
+    conn.commit()
+    if out["status"] == "unknown_person":
+        raise HTTPException(404, "person not found")
+    return out
