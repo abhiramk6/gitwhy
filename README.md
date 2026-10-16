@@ -33,3 +33,8 @@ See `docs/PLAN.md`, `docs/decisions.md`, `docs/demo-script.md`, `docs/eval-repor
 return `llm_required` / are skipped. Set `PROVIDER=gemini` with `GEMINI_API_KEY` (Gemini Developer API), or
 `PROVIDER=vertex` with `GCP_PROJECT` (application default credentials). Judgments are cached in `llm_judgments`
 and replayed without a model. See `docs/heuristics-audit.md`.
+
+Embeddings can come from a different provider than generation: `EMBED_PROVIDER=voyage` + `VOYAGE_API_KEY` (model
+`voyage-4-large`, 1024-dim; free-account limits 3 RPM / ~10K TPM are paced, never retried). Each embedding model is its
+own corpus slice: vectors from different models are never mixed, and reports name the model. `ops/embed_voyage.sh` runs
+one pass.
