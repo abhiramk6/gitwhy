@@ -1,4 +1,7 @@
-Voyage pass is healthy: 768 chunks by 06:10 UTC, about 18.5 chunks/min. First pass (3,550 chunks) ETA about 08:40 UTC; the 832 comment chunks and Northwind follow in a second pass (about 09:30-10:30 UTC).
-Then: rebuild the OSS graph for review guidance, dev-only partial B (non-evidential, after the docs tier, about 07:45 UTC), UI check on the OSS org (:8001).
-Real B and the single held-out run wait for full embeddings AND the owner's OK to freeze prompts.
-After the Voyage passes finish: rename Postgres database+role from the old name to gitwhy (stop api windows and the pass first), update ~/.config/gitwhy/db.env, backend/app/config.py default URL, deploy/deploy.sh; restart api windows; run tests; then remove the ~/.config/lore compatibility symlink.
+STOPPED on the owner's order (2026-10-16 09:25 UTC): embedding pass, API servers, hourly updater, watchdog, duplicate agent window, scheduled wake-ups. Running: Telegram receiver, this session, Postgres, sshd.
+Resume only when the owner says so (tmux session gitwhy):
+  embeddings:  tmux new-window -d -t gitwhy -n voyage ops/embed_voyage.sh      (resumes from stored vectors; 2 requests/min)
+  api (Northwind :8000 / OSS :8001): scratchpad run_api.sh (ORG_SLUG, PORT) in tmux windows api / api-oss
+  hourly updater: tmux new-window -d -t gitwhy -n hourly "bash -lc 'cd /root/lore-intelligence; set -a; . ~/.config/gitwhy/db.env; set +a; while true; do backend/.venv/bin/python ops/hourly_update.py; sleep 60; done'"
+  watchdog: tmux new-window -d -t gitwhy -n watchdog ./ops/watchdog.sh
+Pending after resume: finish Voyage passes (code, comments, Northwind), OSS graph rebuild, Postgres rename, stronger-model comparison, real B/held-out (needs the owner's OK).
