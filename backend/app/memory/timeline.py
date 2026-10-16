@@ -11,6 +11,7 @@ import re
 import psycopg
 
 from ..intelligence import tasks as T
+from ..intelligence.guards import exact
 from ..intelligence.judge import run_task
 from ..models.provider import LLMUnavailable, Provider
 from ..retrieval.search import search_with_meta
@@ -78,7 +79,7 @@ def timeline(conn: psycopg.Connection, org: int, provider: Provider, fact_id: in
                 "No other records touch this topic.", "cites": []}}
     try:
         res = run_task(conn, org, provider, "guidance_timeline", T.GUIDANCE_TIMELINE["system"], {
-            "guidance": {"text": f["summary"], "said_by": (src or {}).get("author"), "date": (src or {}).get("date"),
+            "guidance": {"id": "origin", "text": f["summary"], "said_by": (src or {}).get("author"), "date": (src or {}).get("date"),
                          "exact_words": (src or {}).get("original", "")[:2500]},
             "candidates": [{k: v for k, v in c.items() if k != "_body"} for c in cands.values()]},
             T.GUIDANCE_TIMELINE["schema"])
@@ -101,5 +102,12 @@ def timeline(conn: psycopg.Connection, org: int, provider: Provider, fact_id: in
     gdate = (src or {}).get("date")
     if status == "replaced" and not any(dated.get(i) and gdate and dated[i] >= gdate for i in ids):
         status = "unclear"               # only a later record can replace it
-    return {"status": "ok", "guidance": head, "events": events,
+    story = []
+    for st in res.get("story", []):
+        sids = [i for i in dict.fromkeys(st.get("cites") or []) if i in cands or (i == "origin" and src)]
+        text = (st.get("text") or "").strip()
+        if text and sids:
+            story.append({"text": text, "cites": [src["id"] if i == "origin" else i for i in sids],
+                          "key": exact(st.get("key", ""), text, max_words=10)})
+    return {"status": "ok", "guidance": head, "events": events, "story": story,
             "verdict": {"status": status, "reason": res["status_reason"], "cites": ids}}

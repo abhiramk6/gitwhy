@@ -159,15 +159,22 @@ ASK = {
         "when (the evidence carries author and date) and cite it; (4) if sources disagree, say so and cite both; "
         "(5) if the evidence does not answer the question, set sufficient=false, say what is missing in one sentence "
         "and suggest what to look for: do not guess; (6) short plain sentences, no preamble; (7) follow_ups: up to "
-        "three natural next questions the evidence could answer. Earlier turns, when given, are context only and are "
-        "not evidence."),
+        "three natural next questions the evidence could answer; (8) 'headline': the one-sentence bottom line a busy "
+        "engineer needs first, with its citations; (9) every statement and the headline carry 'key': the single most "
+        "important phrase (at most 8 words) copied exactly from that statement's own text; (10) 'proof': words copied "
+        "exactly from one cited evidence item (its text or original_words, at most 35 words) that prove the statement; "
+        "empty string if no exact words fit. Earlier turns, when given, are context only and are not evidence."),
     "schema": {"type": "object", "properties": {
         "sufficient": {"type": "boolean"},
+        "headline": {"type": "object", "properties": {
+            "text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}},
+            "key": {"type": "string"}, "proof": {"type": "string"}}, "required": ["text", "cites", "key", "proof"]},
         "answer": {"type": "array", "items": {"type": "object", "properties": {
-            "text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}}},
-            "required": ["text", "cites"]}},
+            "text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}},
+            "key": {"type": "string"}, "proof": {"type": "string"}},
+            "required": ["text", "cites", "key", "proof"]}},
         "follow_ups": {"type": "array", "items": {"type": "string"}}},
-        "required": ["sufficient", "answer", "follow_ups"]},
+        "required": ["sufficient", "headline", "answer", "follow_ups"]},
 }
 
 HANDOVER = {
@@ -182,11 +189,13 @@ HANDOVER = {
         "'open_work': unfinished tickets or follow-ups they own; (5) 'people_to_ask': other people who touched the "
         "same areas, with what to ask them; (6) 'risks': what breaks or gets lost if nothing is done, concrete; "
         "(7) 'first_week': at most five concrete actions for the successor; (8) never invent names, files or numbers; "
-        "(9) say nothing rather than guess: empty lists are fine; (10) one or two plain sentences per item."),
+        "(9) say nothing rather than guess: empty lists are fine; (10) one or two plain sentences per item; (11) every "
+        "item has 'key': the most important phrase (at most 8 words) copied exactly from that item's text."),
     "schema": {"type": "object", "properties": {"summary": {"type": "string"},
         **{k: {"type": "array", "items": {"type": "object", "properties": {
-            "text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}}},
-            "required": ["text", "cites"]}} for k in
+            "text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}},
+            "key": {"type": "string"}},
+            "required": ["text", "cites", "key"]}} for k in
            ("only_they_know", "standards_they_set", "open_work", "people_to_ask", "risks", "first_week")}},
         "required": ["summary", "only_they_know", "standards_they_set", "open_work", "people_to_ask", "risks",
                      "first_week"]},
@@ -204,14 +213,40 @@ GUIDANCE_TIMELINE = {
         "status for the guidance TODAY: 'holds' (nothing contradicts or replaces it), 'contradicted' (later work or text "
         "conflicts and nothing explains it), 'replaced' (a later explicit decision replaces it), or 'unclear'; with a "
         "one-sentence reason and the candidate ids that justify it. A candidate dated before the guidance cannot "
-        "replace it. Say nothing rather than guess."),
+        "replace it. Finally write 'story': two to four short sentences telling the life of this standard for a busy "
+        "reader (who set it and when, whether work since has kept to it or ignored it), each with 'cites' (candidate "
+        "ids, or 'origin' for the original thread) and 'key': the most important phrase (at most 8 words) copied "
+        "exactly from that sentence. Say nothing rather than guess."),
     "schema": {"type": "object", "properties": {
         "events": {"type": "array", "items": {"type": "object", "properties": {
             "id": {"type": "string"}, "relation": {"type": "string"}, "quote": {"type": "string"}, "note": {"type": "string"}},
             "required": ["id", "relation", "quote", "note"]}},
         "status": {"type": "string"}, "status_reason": {"type": "string"},
-        "status_cites": {"type": "array", "items": {"type": "string"}}},
-        "required": ["events", "status", "status_reason", "status_cites"]},
+        "status_cites": {"type": "array", "items": {"type": "string"}},
+        "story": {"type": "array", "items": {"type": "object", "properties": {
+            "text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}}, "key": {"type": "string"}},
+            "required": ["text", "cites", "key"]}}},
+        "required": ["events", "status", "status_reason", "status_cites", "story"]},
+}
+
+TRACE_EXPLAIN = {
+    "system": (
+        "You explain, for ONE code file, why it looks the way it does today, using only the numbered history items "
+        "given (commits, pull requests, review-thread comments, tickets, decisions) and the style numbers. Write for an "
+        "engineer about to change the file. Output 'headline': one sentence with the most important thing to know "
+        "before touching it; and 'points': two to five short items, most important first, covering: who shaped it, "
+        "which review discussion or decision explains a non-obvious choice or a warning, and any open question. Rules: "
+        "every headline and point cites ids from the list and says nothing the items do not support; a decision whose "
+        "status is 'superseded' is history; each has 'key': the most important phrase (at most 8 words) copied exactly "
+        "from its own text; say nothing rather than guess."),
+    "schema": {"type": "object", "properties": {
+        "headline": {"type": "object", "properties": {"text": {"type": "string"},
+            "cites": {"type": "array", "items": {"type": "string"}}, "key": {"type": "string"}},
+            "required": ["text", "cites", "key"]},
+        "points": {"type": "array", "items": {"type": "object", "properties": {
+            "text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}}, "key": {"type": "string"}},
+            "required": ["text", "cites", "key"]}}},
+        "required": ["headline", "points"]},
 }
 
 PR_REVIEW = {
@@ -234,13 +269,14 @@ PR_REVIEW = {
         "exists: name the existing component to use; (7b) 'runbook_reminder' only when a runbook in the packet governs what is being changed; "
         "(7c) 'past_guidance': the packet's team_guidance lists things reviewers said in earlier threads (with who and when). Use it when the pull request description or changed files indicate the change does what that guidance warns against; cite the guidance fact, copy the shortest exact sentence of the reviewer's words that carries the guidance into 'quote', and say who said it and when in the comment; a guidance item that only shares a topic with the PR is not enough; (8) do not praise, summarise the diff or restate the description; (9) you only see file names, not the "
         "diff: never make claims about specific lines or code you were not shown; `file` must be one of the "
-        "changed files or empty."),
+        "changed files or empty; (10) every comment has 'key': the most important phrase (at most 8 words) copied "
+        "exactly from the comment's own text."),
     "schema": {"type": "object", "properties": {
         "comments": {"type": "array", "items": {"type": "object", "properties": {
             "type": {"type": "string"}, "file": {"type": "string"}, "comment": {"type": "string"},
-            "quote": {"type": "string"},
+            "quote": {"type": "string"}, "key": {"type": "string"},
             "evidence": {"type": "array", "items": {"type": "string"}}},
-            "required": ["type", "file", "comment", "quote", "evidence"]}},
+            "required": ["type", "file", "comment", "quote", "key", "evidence"]}},
         "nothing_to_say": {"type": "boolean"}},
         "required": ["comments", "nothing_to_say"]},
 }

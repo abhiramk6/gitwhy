@@ -11,6 +11,7 @@ import json
 import psycopg
 
 from ..intelligence import tasks as T
+from ..intelligence.guards import exact
 from ..intelligence.judge import run_task
 from ..models.provider import LLMUnavailable, Provider
 from ..retrieval.search import Hit, search_with_meta
@@ -81,16 +82,37 @@ def ask(conn: psycopg.Connection, org: int, provider: Provider, question: str,
     except LLMUnavailable as exc:
         return {"status": "llm_required", "question": question, "answer": [], "citations": [], "retrieval": smeta,
                 "note": str(exc)}
+    def cleaned(seg: dict) -> dict | None:
+        ids = [i for i in dict.fromkeys(seg.get("cites") or []) if i in cites]
+        text = (seg.get("text") or "").strip()
+        if not text or not ids:
+            return None                    # no valid source => the statement is not shown
+        src = [t for i in ids for t in (cites[i]["excerpt"], cites[i].get("original") or "")]
+        return {"text": text, "cites": ids, "key": exact(seg.get("key", ""), text, max_words=10),
+                "proof": exact(seg.get("proof", ""), *src, max_words=45)}
+
     answer, used, dropped = [], [], []
     for seg in res["answer"]:
-        ids = [i for i in dict.fromkeys(seg.get("cites") or []) if i in cites]
-        if not seg["text"].strip() or not ids:
-            if seg["text"].strip():
+        c = cleaned(seg)
+        if c is None:
+            if (seg.get("text") or "").strip():
                 dropped.append({"text": seg["text"].strip(), "reason": "no source in the evidence supports this statement"})
-            continue                       # no valid source => the statement is not shown
-        answer.append({"text": seg["text"].strip(), "cites": ids})
-        used += [i for i in ids if i not in used]
+            continue
+        answer.append(c)
+        used += [i for i in c["cites"] if i not in used]
+    headline = cleaned(res.get("headline") or {})
+    if headline:
+        used += [i for i in headline["cites"] if i not in used]
+    # proof: the first exact quote found for each cited source, shown under the answer
+    proof: dict[str, str] = {}
+    for c in ([headline] if headline else []) + answer:
+        if c["proof"]:
+            for i in c["cites"]:
+                if i not in proof and exact(c["proof"], cites[i]["excerpt"], cites[i].get("original") or ""):
+                    proof[i] = c["proof"]
+                    break
     status = "answered" if answer and res["sufficient"] else ("partial" if answer else "insufficient")
-    return {"status": status, "question": question, "answer": answer,
+    return {"status": status, "question": question, "headline": headline, "answer": answer,
+            "proof": [{"id": i, "quote": q} for i, q in proof.items()],
             "citations": [cites[i] for i in used], "follow_ups": res["follow_ups"][:3], "dropped": dropped, "retrieval": smeta,
             "considered": len(cites)}

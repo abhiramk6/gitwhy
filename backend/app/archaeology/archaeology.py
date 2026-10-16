@@ -104,3 +104,35 @@ def trail(conn: psycopg.Connection, org: int, repo: str, path: str) -> dict | No
                            "url": d["source_url"], "ref": adr, "status": d["status"]})
     events.sort(key=lambda e: (e["when"] is None, e["when"] or "", e["kind"]))
     return {"repo": repo, "path": path, "url": rec["source_url"], "profile": profile(rec["body"] or ""), "events": events}
+
+
+def explain(conn: psycopg.Connection, org: int, provider, repo: str, path: str) -> dict | None:
+    """A model-written account of why the file looks the way it does, over its own trail. Every point must cite trail items."""
+    from ..intelligence import tasks as T
+    from ..intelligence.guards import exact
+    from ..intelligence.judge import run_task
+    from ..models.provider import LLMUnavailable
+
+    t = trail(conn, org, repo, path)
+    if t is None:
+        return None
+    if not provider.has_llm:
+        return {"status": "llm_required", "trail": t, "note": "The explanation needs a language model; the history is shown without one."}
+    items = {e["id"]: e for e in t["events"]}
+    payload = {"file": f"{repo}/{path}", "style": t["profile"]["style"],
+               "comments_in_code": [c["text"] for c in t["profile"]["comments"][:12]],
+               "history": [{"id": e["id"], "kind": e["kind"], "date": e["when"], "who": e["who"], "title": e["title"],
+                            "status": e.get("status"), "text": (e.get("body") or "")[:900]} for e in t["events"][-40:]]}
+    try:
+        res = run_task(conn, org, provider, "trace_explain", T.TRACE_EXPLAIN["system"], payload, T.TRACE_EXPLAIN["schema"])
+    except LLMUnavailable as exc:
+        return {"status": "llm_required", "trail": t, "note": str(exc)}
+
+    def clean(seg):
+        ids = [i for i in dict.fromkeys(seg.get("cites") or []) if i in items]
+        text = (seg.get("text") or "").strip()
+        return {"text": text, "cites": ids, "key": exact(seg.get("key", ""), text, max_words=10)} if text and ids else None
+
+    head = clean(res.get("headline") or {})
+    points = [p for p in (clean(x) for x in res.get("points", [])) if p]
+    return {"status": "ok" if head or points else "insufficient", "headline": head, "points": points, "trail": t}

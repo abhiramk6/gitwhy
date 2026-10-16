@@ -250,3 +250,15 @@ def tags(ids: str = Query(min_length=1, max_length=8000), conn: psycopg.Connecti
 def files(conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id)):
     from . import views
     return views.files(conn, org)
+
+
+@router.post("/archaeology/explain", dependencies=[Depends(require_write)])
+def archaeology_explain(repo: str = Query(min_length=1), path: str = Query(min_length=1),
+                        conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
+                        provider: Provider = Depends(get_provider)):
+    from ..archaeology.archaeology import explain
+    out = explain(conn, org, provider, repo, path)
+    conn.commit()
+    if out is None:
+        raise HTTPException(404, "file not found")
+    return out

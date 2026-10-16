@@ -27,6 +27,7 @@ from ..intelligence import tasks as T
 from ..intelligence.judge import meter, run_task
 from ..models.provider import LLMUnavailable, Provider
 from ..planning.planner import Evidence, _label_for, _valid
+from ..intelligence.guards import exact as exact_phrase
 from ..retrieval.search import search_with_meta
 
 TYPES = {"decision_violation", "superseded_reference", "ownership_risk", "dependency_impact", "runbook_reminder",
@@ -188,6 +189,7 @@ def draft_review(conn: psycopg.Connection, org_id: int, provider: Provider, repo
             continue
         seen.add(key)
         comments.append({"type": ctype, "file": file or None, "comment": c["comment"].strip(),
+                         "key": exact_phrase(c.get("key", ""), c["comment"], max_words=10),
                          "quote": (c.get("quote") or None) if ctype in ("decision_violation", "past_guidance") else None,
                          "evidence": ids, "label": _label_for(ev, ids)})
     after = meter.snapshot()
