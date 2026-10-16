@@ -81,7 +81,7 @@ def plan(p):
 
 def ideal_provider(choose=None, semantic=False, **overrides) -> ScriptedProvider:
     r = {"query_analysis": query_analysis, "rerank": rerank, "decision_pairs": decision_pairs,
-         "pr_compliance": pr_compliance, "reuse_pairs": reuse_pairs, "select_services": make_select(choose),
+         "pr_compliance": pr_compliance, "reuse_pairs": reuse_pairs, "review_guidance": lambda p: {"guidance": []}, "select_services": make_select(choose),
          "plan": plan}
     r.update(overrides)
     return ScriptedProvider(r, semantic=semantic)

@@ -65,6 +65,23 @@ def pr_compliance(conn, org, provider, prs: list[dict], decisions: dict[str, dic
     return out
 
 
+def review_guidance(conn, org, provider, comments: list[dict], batch: int) -> list[dict]:
+    """comments: [{id, repo, pr, author, date, path, text}]. Returns guidance the model found, kept only when the id is
+    a candidate and the quote literally occurs in that comment (otherwise discarded)."""
+    out = []
+    for i in range(0, len(comments), batch * 3):
+        part = comments[i:i + batch * 3]
+        res = run_task(conn, org, provider, "review_guidance", T.REVIEW_GUIDANCE["system"], {"comments": part},
+                       T.REVIEW_GUIDANCE["schema"])
+        by_id = {c["id"]: c for c in part}
+        for g in res["guidance"]:
+            c = by_id.get(g["id"])
+            if not c or g["scope"] not in ("org", "repo") or not _quoted(g["quote"], c["text"]):
+                continue
+            out.append({**g, "comment": c})
+    return out
+
+
 def class_signatures(files) -> list[dict]:
     out = []
     for rec in files:

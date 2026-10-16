@@ -14,11 +14,11 @@ from ..config import get_settings
 from ..models.provider import Provider, QuotaExhausted
 from .chunk import chunk_spans
 
-EMBED_SOURCE_TYPES = ("adr", "doc", "github_pr", "jira_issue", "file")
+EMBED_SOURCE_TYPES = ("adr", "doc", "github_pr", "github_comment", "jira_issue", "file")
 BATCH = 64
 # Embedding priority: the team's decisions and the tickets/PRs that explain them come before prose docs and code.
-TIERS = ("adr", "fact", "jira_issue", "github_pr", "doc", "file")
-TIER_LABEL = {"adr": "ADRs", "fact": "facts", "jira_issue": "issues", "github_pr": "PRs", "doc": "docs", "file": "code"}
+TIERS = ("adr", "fact", "jira_issue", "github_pr", "github_comment", "doc", "file")
+TIER_LABEL = {"adr": "ADRs", "fact": "facts", "jira_issue": "issues", "github_pr": "PRs", "github_comment": "comments", "doc": "docs", "file": "code"}
 
 
 def _vec(v: list[float]) -> str:

@@ -20,7 +20,7 @@ from ..models.provider import LLMUnavailable, Provider, QuotaExhausted
 from .embed import _vec
 
 RRF_K = 60
-_SOURCE_TYPES = ("adr", "doc", "github_pr", "jira_issue", "file")
+_SOURCE_TYPES = ("adr", "doc", "github_pr", "github_comment", "jira_issue", "file")
 _SPLIT = re.compile(r"[\s,;:()\[\]{}\"'<>?!]+")
 
 

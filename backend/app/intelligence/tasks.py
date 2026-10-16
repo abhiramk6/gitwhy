@@ -132,6 +132,23 @@ REUSE_PAIRS = {
 }
 
 
+REVIEW_GUIDANCE = {
+    "system": (
+        "You are given comments written by humans in code-review and issue threads (review comments, PR conversation, "
+        "review summaries, issue comments), each with an id, repository, pull request, author, date and optional file. "
+        "Decide for each comment whether it states reusable team guidance: a standard, rule, objection or warning that "
+        "should be remembered and applied to FUTURE work beyond this one change (for example 'do not use X because Y', "
+        "'always do Z here'). Ordinary approvals, questions, thanks, nits about this one line, or status updates are not "
+        "guidance: omit them. For guidance, give: topic (a short noun phrase), guidance (one sentence in plain words), "
+        "scope ('org' if it applies to all services, 'repo' if only the repository it was said in), the stated reason if "
+        "the comment gives one, and 'quote': the exact words from the comment that carry the guidance, copied verbatim. "
+        "Say nothing rather than guess; an empty list is a valid answer."),
+    "schema": {"type": "object", "properties": {"guidance": {"type": "array", "items": {"type": "object", "properties": {
+        "id": {"type": "string"}, "topic": {"type": "string"}, "guidance": {"type": "string"}, "scope": {"type": "string"},
+        "reason": {"type": "string"}, "quote": {"type": "string"}},
+        "required": ["id", "topic", "guidance", "scope", "reason", "quote"]}}}, "required": ["guidance"]},
+}
+
 PR_REVIEW = {
     "system": (
         "You draft code-review comments for ONE pull request from team knowledge only. You are given the pull "

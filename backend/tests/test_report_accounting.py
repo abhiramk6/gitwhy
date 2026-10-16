@@ -245,3 +245,21 @@ def test_voyage_429_stops_and_wrong_dimension_fails():
     bad = _voyage(lambda r: httpx.Response(200, json={"data": [{"index": 0, "embedding": [0.1]}], "usage": {}}))
     with pytest.raises(RuntimeError):
         bad.embed(["x"])
+
+
+def test_review_guidance_keeps_only_quoted_candidates_and_scopes(conn):
+    from app.knowledge.judgments import review_guidance
+    org = org_id(conn)
+    comments = [{"id": "r#1/review_comment-1", "repo": "r", "pr": "r#1", "author": "a", "date": "2026-01-01", "path": None,
+                 "text": "Please don't use offset pagination here. It skipped rows under concurrent writes."},
+                {"id": "r#1/pr_comment-2", "repo": "r", "pr": "r#1", "author": "b", "date": "2026-01-02", "path": None,
+                 "text": "LGTM, thanks!"}]
+    good = {"id": comments[0]["id"], "topic": "pagination", "guidance": "Use cursors, not offsets.", "scope": "org",
+            "reason": "rows skipped", "quote": "don't use offset pagination here"}
+    prov = ScriptedProvider({"review_guidance": lambda p: {"guidance": [
+        good,
+        {**good, "quote": "this sentence was invented"},                      # not literally in the comment
+        {**good, "id": "r#9/ghost-9"},                                         # not a candidate
+        {**good, "scope": "galaxy"}]}})
+    out = review_guidance(conn, org, prov, comments, batch=8)
+    assert [g["id"] for g in out] == [comments[0]["id"]] and out[0]["comment"]["author"] == "a"

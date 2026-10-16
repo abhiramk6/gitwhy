@@ -551,6 +551,8 @@ def generate(out: Path) -> dict:
         write_json(out / "history" / f"{repo}.commits.json", c)
     write_json(out / "history" / "prs.json", prs)
     write_json(out / "history" / "jira.json", jira)
+    # Review threads / PR conversation (hand-written scenarios: standards that live only in review comments).
+    write_json(out / "history" / "discussion.json", json.loads((Path(__file__).parent / "northwind_discussion.json").read_text()))
     write_json(out / "org.json", ORG)
     write_json(out / "people.json", [{"login": k, "name": v[0], "team": v[1], "email": f"{k}@{DOMAIN}", "synthetic": True}
                                     for k, v in PEOPLE.items()])

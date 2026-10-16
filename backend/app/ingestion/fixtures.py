@@ -91,6 +91,17 @@ def iter_records(root: Path) -> Iterator[Rec]:
     for pr in json.loads((root / "history/prs.json").read_text()):
         yield Rec("github_pr", f"{pr['repo']}#{pr['number']}", pr["repo"], pr["title"], pr["body"], pr,
                   f"{urls.get(pr['repo'], f'{HOST}/' + pr['repo'])}/pull/{pr['number']}", pr["merged_at"])
+    disc = root / "history/discussion.json"
+    if disc.exists():  # human discussion around PRs/issues: review comments, PR conversation, review summaries, issue comments
+        for c in json.loads(disc.read_text()):
+            if c["kind"] == "_done" or not (c.get("body") or "").strip():
+                continue
+            what = {"review_comment": "Review comment", "review": "Review", "pr_comment": "PR comment",
+                    "issue_comment": "Issue comment"}[c["kind"]]
+            where = f" on {c['path']}" if c.get("path") else ""
+            title = f"{what} by {c['author']} on {c['repo']}#{c['number']}{where} ({c['date']})"
+            yield Rec("github_comment", f"{c['repo']}#{c['number']}/{c['kind']}-{c['id']}", c["repo"], title, c["body"], c,
+                      c.get("url") or f"{urls.get(c['repo'], f'{HOST}/' + c['repo'])}/pull/{c['number']}", c["date"])
     for t in json.loads((root / "history/jira.json").read_text()):
         yield Rec("jira_issue", t["key"], None, t["summary"], t["description"], t,
                   t.get("url") or f"https://jira.example/browse/{t['key']}", t["updated"])

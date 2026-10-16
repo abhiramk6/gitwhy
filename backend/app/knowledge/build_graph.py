@@ -282,9 +282,25 @@ def build(conn: psycopg.Connection, org_id: int, provider=None) -> BuildStats:
         prs.append({"id": rec["source_id"], "repo": p["repo"], "title": p["title"], "body": p["body"],
                     "files": p["files"], "_entity": pr, "_rec": rec})
 
-    # ---- model judgments (conflicts, compliance, reuse): skipped, and reported as skipped, without an LLM
+    # ---- discussion: every human comment is a record; structurally link it to its PR (and author if known)
+    comments: list[dict] = []
+    pr_ent = {p["id"]: p["_entity"] for p in prs}
+    for rec in _records(conn, org_id, "github_comment"):
+        c = rec["payload"]
+        ce = b.entity("comment", rec["source_id"], c["repo"], title=rec["title"])
+        target = pr_ent.get(f"{c['repo']}#{c['number']}")
+        if target:
+            b.edge(ce, target, "comments_on", "structural", rec["source_url"] or rec["source_id"], source_record_id=rec["id"])
+        author = b.entity("person", c["author"]) if c.get("author") else None
+        if author:
+            b.edge(author, ce, "wrote", "structural", rec["source_url"] or rec["source_id"], source_record_id=rec["id"])
+        comments.append({"id": rec["source_id"], "repo": c["repo"], "pr": f"{c['repo']}#{c['number']}",
+                         "author": c.get("author"), "date": c.get("date"), "path": c.get("path"), "text": rec["body"],
+                         "_entity": ce, "_rec": rec})
+
+    # ---- model judgments (conflicts, compliance, reuse, review guidance): skipped, and reported as skipped, without an LLM
     if provider is not None:
-        _judge(conn, org_id, provider, b, svc, decisions, adr_meta, prs, files, mod)
+        _judge(conn, org_id, provider, b, svc, decisions, adr_meta, prs, files, mod, comments)
 
     # ---- ownership statistics from commit history (computed numbers; thresholds are settings)
     cfg = get_settings()
@@ -331,7 +347,7 @@ def build(conn: psycopg.Connection, org_id: int, provider=None) -> BuildStats:
     return b.stats
 
 
-def _judge(conn, org, provider, b: "Builder", svc, decisions, adr_meta, prs, files, mod) -> None:
+def _judge(conn, org, provider, b: "Builder", svc, decisions, adr_meta, prs, files, mod, comments=()) -> None:
     cfg = get_settings()
     st = b.stats.judgments
 
@@ -393,6 +409,22 @@ def _judge(conn, org, provider, b: "Builder", svc, decisions, adr_meta, prs, fil
             n += 1
         st["reuse_findings"] = n
 
+    def guidance():
+        by_id = {c["id"]: c for c in comments}
+        plain = [{k: v for k, v in c.items() if not k.startswith("_")} for c in comments]
+        n = 0
+        for g in judgments.review_guidance(conn, org, provider, plain, cfg.judge_batch_size):
+            c = by_id[g["id"]]
+            b.fact("review_guidance", "reviewer_guidance", g["id"],
+                   f"{g['topic']}: {g['guidance']} (said by {c['author']} on {c['date']} in {c['pr']}"
+                   f"{'; reason: ' + g['reason'] if g['reason'] else ''})",
+                   "explicit", "active", "github_comment", g["id"], c["_rec"]["source_url"], 0.8,
+                   subject=c["_entity"], repo=c["repo"], scope=g["scope"], valid_from=c["date"])
+            n += 1
+        st["review_guidance"] = n
+
     guarded("decision_conflicts", conflicts)
     guarded("pr_compliance", compliance)
     guarded("reuse", reuse)
+    if comments:
+        guarded("review_guidance", guidance)
