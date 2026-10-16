@@ -15,7 +15,7 @@ cd backend && .venv/bin/python -m app.seed         # migrate + ingest + graph + 
 cd ../frontend && npm ci && npm run build          # (UI is served from frontend/dist)
 ```
 Tests: `cd backend && .venv/bin/python -m pytest -q` · Fixture check: `python3 scripts/validate_synthetic_org.py`
-· Eval: `python3 scripts/evaluate.py` · Browser e2e: `frontend/e2e/e2e.mjs` (needs playwright).
+· Eval: `python3 scripts/evaluate.py` · Browser flows: `node frontend/e2e/flows.mjs <out-dir>` (needs playwright-core).
 
 ## Layout
 `backend/app/{ingestion,knowledge,graph,retrieval,planning,models,api,mcp}` · `frontend/` (React+Vite) ·
