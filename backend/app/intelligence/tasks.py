@@ -244,7 +244,7 @@ HANDOVER = {
         "(8b) 'poorly_documented': areas where the packet shows 'documents_mentioning_file' is 0 AND the person wrote most of the "
         "history, so the reasons behind the code may live only in their head; say 'no document or decision found that mentions it', never "
         "that nothing exists; (8c) commit history shows who changed files, not who understands them: never call anyone the owner or the "
-        "expert on the strength of file history alone, say 'wrote N of M commits'; in 'people_to_ask' prefer people with "
+        "expert on the strength of file history alone (the 'summary' too: no 'owns', no 'expert'), say 'wrote N of M commits' or 'is listed as owner in CODEOWNERS' only when an ownership fact says so; in 'people_to_ask' prefer people with "
         "still_active=true and say they touched the area, to be confirmed with them; "
         "(9) say nothing rather than guess: empty lists are fine; (10) one or two plain sentences per item; (11) every "
         "item has 'key': the most important phrase (at most 8 words) copied exactly from that item's text."),

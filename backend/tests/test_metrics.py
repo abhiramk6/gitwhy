@@ -61,3 +61,10 @@ def test_estimate_only_when_an_assumption_is_given_and_is_labelled(conn, org):
     assert metrics.summary(conn, org)["estimate"] is None
     e = metrics.summary(conn, org, 15)["estimate"]
     assert e["hours"] == 0.5 and "not a measurement" in e["label"]
+
+
+def test_first_time_questions_are_timed_apart_from_cached_repeats(conn, org):
+    metrics.record(conn, org, None, "ask", 40, {"status": "answered", "live_calls": 0})
+    metrics.record(conn, org, None, "ask", 9000, {"status": "answered", "live_calls": 2})
+    m = metrics.summary(conn, org)["measured"]
+    assert m["median_seconds_to_sourced_answer"] == 4.5 and m["median_seconds_first_time_question"] == 9.0 and m["first_time_questions"] == 1

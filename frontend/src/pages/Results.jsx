@@ -3,7 +3,7 @@ import { api } from '../api.js'
 import { Hl, Problem, Reading } from '../ui.jsx'
 import { useAsync } from '../components.jsx'
 
-const fmt = (s) => (s == null ? 'not yet' : s < 90 ? `${Math.round(s)} s` : `${(s / 60).toFixed(1)} min`)
+const fmt = (s) => (s == null ? 'not yet' : s < 1 ? 'under 1 s' : s < 90 ? `${Math.round(s)} s` : `${(s / 60).toFixed(1)} min`)
 
 function Stopwatch({ running }) {
   const t0 = useRef(null)
@@ -77,8 +77,9 @@ export default function Results() {
         <>
           <section className="sect"><h2>Measured</h2>
             <table className="tbl"><tbody>
-              <tr><td>Questions answered with sources</td><td className="num">{d.measured.questions_answered} of {d.measured.questions_asked} asked</td></tr>
-              <tr><td>Median time for Gitwhy to return a sourced answer</td><td className="num">{fmt(d.measured.median_seconds_to_sourced_answer)}</td></tr>
+              <tr><td>Questions answered with sources</td><td className="num" style={{ whiteSpace: 'nowrap' }}>{d.measured.questions_answered} of {d.measured.questions_asked}</td></tr>
+              <tr><td>Median time to a sourced answer, all questions</td><td className="num">{fmt(d.measured.median_seconds_to_sourced_answer)}</td></tr>
+              <tr><td>Median time to a sourced answer, first-time questions ({d.measured.first_time_questions})</td><td className="num">{fmt(d.measured.median_seconds_first_time_question)}</td></tr>
               <tr><td>Pull requests checked against earlier decisions</td><td className="num">{d.measured.prs_reviewed}</td></tr>
               <tr><td>Repeated issues detected (an earlier decision or reviewer comment a PR runs against)</td><td className="num">{d.measured.repeated_issues_detected}</td></tr>
               <tr><td>Statements shown / removed because no source backs them</td><td className="num">{d.measured.citations.statements_shown} / {d.measured.citations.statements_removed_by_guard}</td></tr>

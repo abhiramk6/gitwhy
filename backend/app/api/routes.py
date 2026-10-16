@@ -161,9 +161,11 @@ def ask(body: AskBody, conn: psycopg.Connection = Depends(get_conn), org: int = 
         provider: Provider = Depends(get_provider), uid: int | None = Depends(optional_user_id)):
     from ..ask.ask import ask as run_ask
     from ..metrics import metrics
-    t0 = time.perf_counter()
+    from ..intelligence.judge import meter
+    t0, live0 = time.perf_counter(), meter.snapshot()["live"]
     out = run_ask(conn, org, provider, body.question, [t.model_dump() for t in body.history])
-    out["event_id"] = metrics.record(conn, org, uid, "ask", int((time.perf_counter() - t0) * 1000), metrics.ask_detail(out))
+    out["event_id"] = metrics.record(conn, org, uid, "ask", int((time.perf_counter() - t0) * 1000),
+                                     {**metrics.ask_detail(out), "live_calls": meter.snapshot()["live"] - live0})
     conn.commit()
     return out
 

@@ -85,7 +85,10 @@ def summary(conn: psycopg.Connection, org: int, assumed_minutes: float | None = 
     out: dict[str, Any] = {
         "measured": {
             "questions_asked": len(asks), "questions_answered": len(answered),
-            "median_seconds_to_sourced_answer": _med([e["duration_ms"] / 1000 for e in answered if e["duration_ms"]]),
+            "median_seconds_to_sourced_answer": _med([e["duration_ms"] / 1000 for e in answered if e["duration_ms"] is not None]),
+            # a repeat of a question already judged is served from saved judgments in well under a second; first-time questions pay for the model
+            "median_seconds_first_time_question": _med([e["duration_ms"] / 1000 for e in answered if e["detail"].get("live_calls")]),
+            "first_time_questions": sum(1 for e in answered if e["detail"].get("live_calls")),
             "prs_reviewed": sum(1 for e in ev if e["kind"] == "review"), "repeated_issues_detected": len(repeats),
             "other": {k: sum(1 for e in ev if e["kind"] == k) for k in ("plan", "handover", "impact", "departure")},
             "citations": {"statements_shown": shown, "statements_removed_by_guard": dropped,

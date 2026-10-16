@@ -25,10 +25,13 @@ await run('ask', async () => {
   await page.goto(BASE + '/#/ask'); await page.waitForSelector('.chip'); await shot('01-ask-start')
   await page.click('.chip:has-text("cursor pagination")')
   await page.waitForSelector('.headline', { timeout: 120000 }); await page.waitForTimeout(1200); await shot('02-ask-answer')
+  await page.click('button:has-text("Yes, correct")'); await page.waitForSelector('text=Thanks, recorded')
   await page.click('.pcard >> nth=0'); await page.waitForSelector('.col .hero'); await shot('02b-ask-source-open')
 })
 await run('review', async () => {
-  await page.goto(BASE + '/#/review'); await page.waitForSelector('.cm', { timeout: 120000 }); await shot('03-review-draft')
+  await page.goto(BASE + '/#/review'); await page.waitForSelector('.picker')
+  await page.click('.picker button'); await page.fill('.pop input', 'refunds'); await page.click('.pop li button >> nth=0')
+  await page.waitForSelector('.cm .diffline', { timeout: 120000 }); await shot('03-review-draft')
 })
 await run('memory', async () => {
   await page.goto(BASE + '/#/memory'); await page.waitForSelector('.list li button')
@@ -46,6 +49,11 @@ await run('plan', async () => {
 await run('trace', async () => {
   await page.goto(BASE + '/#/trace?f=' + encodeURIComponent('notify-svc:notify/dedupe.py')); await page.waitForSelector('.headline', { timeout: 120000 }); await shot('07-trace')
 })
+await run('impact', async () => {
+  await page.goto(BASE + '/#/impact'); await page.waitForSelector('.chip'); await page.fill('#iq', 'If I change the ledger-core service, what else could break?'); await page.click('button:has-text("Check")')
+  await page.waitForSelector('.dmap', { timeout: 180000 }); await shot('09-impact')
+})
+await run('results', async () => { await page.goto(BASE + '/#/results'); await page.waitForSelector('.tbl'); await shot('10-results') })
 await run('sources', async () => { await page.goto(BASE + '/#/sources'); await page.waitForSelector('.tbl'); await shot('08-sources') })
 console.log(problems.length ? 'PROBLEMS:\n' + problems.join('\n') : 'no problems')
 await browser.close()
