@@ -169,3 +169,13 @@ def handover(login: str, conn: psycopg.Connection = Depends(get_conn), org: int 
     if out["status"] == "unknown_person":
         raise HTTPException(404, "person not found")
     return out
+
+
+@router.get("/archaeology")
+def archaeology(repo: str = Query(min_length=1), path: str = Query(min_length=1),
+                conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id)):
+    from ..archaeology.archaeology import trail
+    t = trail(conn, org, repo, path)
+    if not t:
+        raise HTTPException(404, "file not found")
+    return t
