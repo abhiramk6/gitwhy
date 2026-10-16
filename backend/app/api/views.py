@@ -88,7 +88,7 @@ def starters(conn: psycopg.Connection, org: int, n: int = 3) -> list[str]:
                           "status IN ('active','candidate') ORDER BY valid_from DESC NULLS LAST, id LIMIT %s", (org, n)):
         topic = r["summary"].split(":", 1)[0].strip()
         if topic:
-            out.append(f"What is our rule on {topic[0].lower() + topic[1:]}, and who set it?")
+            out.append(f"What is our rule on {topic if topic[:2].isupper() else topic[0].lower() + topic[1:]}, and who set it?")
     if len(out) < n:
         for r in conn.execute("SELECT title FROM source_records WHERE organization_id=%s AND source_type='adr' ORDER BY id LIMIT %s",
                               (org, n - len(out))):
@@ -137,3 +137,10 @@ def tags(conn: psycopg.Connection, org: int, ids: list[str]) -> dict[str, dict]:
         if r:
             out[i] = _meta(r)
     return out
+
+
+def files(conn: psycopg.Connection, org: int, limit: int = 600) -> list[dict]:
+    """Code files that can be traced: id is 'repo:path'."""
+    return [{"id": r["source_id"], "repo": r["source_id"].split(":", 1)[0], "path": r["source_id"].split(":", 1)[1]}
+            for r in conn.execute("SELECT source_id FROM source_records WHERE organization_id=%s AND source_type='file' "
+                                  "ORDER BY source_id LIMIT %s", (org, limit))]

@@ -141,7 +141,7 @@ REVIEW_GUIDANCE = {
         "'always do Z here'). Ordinary approvals, questions, thanks, nits about this one line, or status updates are not "
         "guidance: omit them. For guidance, give: topic (a short noun phrase), guidance (one sentence in plain words), "
         "scope ('org' if it applies to all services, 'repo' if only the repository it was said in), the stated reason if "
-        "the comment gives one, and 'quote': the exact words from the comment that carry the guidance, copied verbatim. "
+        "the comment gives one, and 'quote': the shortest exact passage (one sentence or clause) from the comment that carries the guidance, copied verbatim. "
         "Say nothing rather than guess; an empty list is a valid answer."),
     "schema": {"type": "object", "properties": {"guidance": {"type": "array", "items": {"type": "object", "properties": {
         "id": {"type": "string"}, "topic": {"type": "string"}, "guidance": {"type": "string"}, "scope": {"type": "string"},
@@ -232,7 +232,7 @@ PR_REVIEW = {
         "touches the service's interface or behaviour, never as a fact that behaviour changes; (7) "
         "'reuse_opportunity' when a reuse finding says the pull request re-implements something that already "
         "exists: name the existing component to use; (7b) 'runbook_reminder' only when a runbook in the packet governs what is being changed; "
-        "(7c) 'past_guidance': the packet's team_guidance lists things reviewers said in earlier threads (with who and when). Use it when the pull request description or changed files indicate the change does what that guidance warns against; cite the guidance fact, copy the reviewer's exact words into 'quote', and say who said it and when in the comment; a guidance item that only shares a topic with the PR is not enough; (8) do not praise, summarise the diff or restate the description; (9) you only see file names, not the "
+        "(7c) 'past_guidance': the packet's team_guidance lists things reviewers said in earlier threads (with who and when). Use it when the pull request description or changed files indicate the change does what that guidance warns against; cite the guidance fact, copy the shortest exact sentence of the reviewer's words that carries the guidance into 'quote', and say who said it and when in the comment; a guidance item that only shares a topic with the PR is not enough; (8) do not praise, summarise the diff or restate the description; (9) you only see file names, not the "
         "diff: never make claims about specific lines or code you were not shown; `file` must be one of the "
         "changed files or empty."),
     "schema": {"type": "object", "properties": {

@@ -1,52 +1,49 @@
 import { useEffect, useState } from 'react'
-import Overview from './pages/Overview.jsx'
-import GraphPage from './pages/Graph.jsx'
-import Planner from './pages/Planner.jsx'
-import Knowledge from './pages/Knowledge.jsx'
 import { api, getToken, setToken } from './api.js'
+import { Column, ColumnProvider, go, useColumn, useRoute } from './ui.jsx'
+import Ask from './pages/Ask.jsx'
+import Review from './pages/Review.jsx'
+import Memory from './pages/Memory.jsx'
+import People from './pages/People.jsx'
+import Plan from './pages/Plan.jsx'
+import Trace from './pages/Trace.jsx'
+import Sources from './pages/Sources.jsx'
+import GraphPage from './pages/Graph.jsx'
 
-const PAGES = [
-  ['overview', 'Overview', Overview],
-  ['graph', 'Graph', GraphPage],
-  ['planner', 'Feature Planner', Planner],
-  ['knowledge', 'Knowledge', Knowledge],
+const NAV = [
+  ['ask', 'Ask', Ask], ['review', 'Review', Review], ['memory', 'Memory', Memory], ['people', 'People', People],
+  ['plan', 'Plan', Plan], ['trace', 'Trace', Trace], ['sources', 'Sources', Sources], ['map', 'Map', GraphPage],
 ]
 
-function useHash() {
-  const read = () => (window.location.hash.replace('#/', '') || 'overview').split('?')[0]
-  const [page, setPage] = useState(read)
-  useEffect(() => {
-    const on = () => setPage(read())
-    window.addEventListener('hashchange', on)
-    return () => window.removeEventListener('hashchange', on)
-  }, [])
-  return page
-}
-
-export default function App() {
-  const page = useHash()
-  const [token, setTok] = useState(getToken())
+function Shell() {
+  const { page, q } = useRoute()
+  const col = useColumn()
   const [org, setOrg] = useState(null)
+  const [tok, setTok] = useState(getToken())
+  const [showTok, setShowTok] = useState(false)
   useEffect(() => { api.overview().then((o) => setOrg(o.organization)).catch(() => {}) }, [])
-  const Current = (PAGES.find(([k]) => k === page) || PAGES[0])[2]
+  useEffect(() => { col.close() }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  const Current = (NAV.find(([k]) => k === page) || NAV[0])[2]
+  const wide = ['people', 'map', 'sources', 'trace'].includes(page)
   return (
-    <div className="shell">
-      <nav aria-label="Main">
-        <div className="brand">LORE<span>Intelligence</span></div>
-        {PAGES.map(([k, label]) => (
-          <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''}>{label}</a>
-        ))}
-        <div className="spacer" />
-        <label className="token">
-          Demo token
-          <input type="password" value={token} placeholder="only if required"
-                 onChange={(e) => { setTok(e.target.value); setToken(e.target.value) }} />
-        </label>
-        <p className="note">{org && !org.is_synthetic
-          ? 'Public open-source repositories (real GitHub history) with a synthetic team-knowledge layer on top.'
-          : 'Synthetic organization. No real people or customer data.'}</p>
-      </nav>
-      <main><Current /></main>
+    <div className="app">
+      <header className="top">
+        <div className="brand">LORE<small>what your engineering org knows</small></div>
+        <nav className="nav" aria-label="Main">
+          {NAV.slice(0, 5).map(([k, l]) => <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''}>{l}</a>)}
+          <span className="gap" />
+          {NAV.slice(5).map(([k, l]) => <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''}>{l}</a>)}
+        </nav>
+        {org && <span className="org">{org.name}{org.is_synthetic ? ' (synthetic)' : ''}</span>}
+        <button className="btn quiet small" onClick={() => setShowTok((s) => !s)} aria-label="Demo token" title="Demo token (only if the server asks for one)">⚿</button>
+        {showTok && <input type="password" value={tok} placeholder="demo token" style={{ width: 150 }} aria-label="Demo token"
+          onChange={(e) => { setTok(e.target.value); setToken(e.target.value) }} />}
+      </header>
+      <div className={`work${col.sel ? ' open' : ''}`}>
+        <main className={`surface${wide ? ' wide' : ''}`}><div className="wrap"><Current q={q} /></div></main>
+        <Column go={go} />
+      </div>
     </div>
   )
 }
+export default function App() { return <ColumnProvider><Shell /></ColumnProvider> }

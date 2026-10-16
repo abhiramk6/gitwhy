@@ -244,3 +244,9 @@ def tags(ids: str = Query(min_length=1, max_length=8000), conn: psycopg.Connecti
          org: int = Depends(get_org_id)):
     from . import views
     return views.tags(conn, org, [x for x in ids.split(",") if x])
+
+
+@router.get("/files")
+def files(conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id)):
+    from . import views
+    return views.files(conn, org)

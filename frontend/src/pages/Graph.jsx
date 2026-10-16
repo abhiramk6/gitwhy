@@ -39,7 +39,7 @@ export default function GraphPage() {
   }, [g.data, types, rels])
 
   return (
-    <div className="page">
+    <div className="page legacy">
       <h1>Organization graph</h1>
       <div className="filters">
         {Object.keys(types).map((t) => <Chip key={t} active={types[t]} onClick={() => setTypes({ ...types, [t]: !types[t] })}>{t}</Chip>)}
