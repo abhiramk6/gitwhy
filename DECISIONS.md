@@ -4,12 +4,13 @@ One line per non-trivial decision: what, and why. Newest first. Owner-pending it
 repeated (not re-sent) in each hourly update until answered.
 
 ## Waiting on owner
-_none blocking._
+_none blocking._ (Owner asked about paid-tier embedding cost; estimate sent, ~$0.25 for 3,550 chunks; awaiting his explicit yes before any billing change. Plan A continues meanwhile.)
 
 Also, one-time ask at the next milestone (dev-only partial B): review of the OSS dev lists and
 `excluded_subjects`, which are **agent-confirmed, not human-reviewed**.
 
 ## Log (UTC, server clock)
+- 2026-10-16 00:30 — Owner asked what paid Gemini embedding would cost. Sent estimate (5.47M chars ≈ 1.4–1.8M tokens ≈ $0.25 at the remembered ~$0.15/1M, unverified). No billing action taken; needs owner's explicit yes, and would change the pinned schedule/free-tier setup.
 - 2026-10-16 00:17 — EMBEDDING CAP EARLY, schedule slips one day: pass 1 (00:05 UTC) was refused by the API with 0 accepted index items (ledger budget 900); the API gave retry-in 86,083 s, i.e. the next window opens ~2026-10-17 00:00 UTC, not Oct 16 as the earlier RetryInfo implied. Stopped for the day, no retry, no probing. Coverage unchanged at 832/3,550 (ADRs 0/8, facts 0/35, issues 0/303, PRs 140/722, docs 226/1054, code 466/1428). 2,718 pending = 4 passes of up to 900: Oct 17, 18, 19, 20 -> full coverage ~Oct 20 00:05 UTC (was Oct 19). Plan A order unchanged; backup key still not used for the index. Dev-only partial B moves to ~Oct 18 (after the docs tier); completion check to Oct 20. Cause of the refusal is not known (no accepted items logged today).
 - 2026-10-15 20:40 — PR review: reuse findings added to the packet (a duplicate-implementation PR now gets a reuse_opportunity comment, which must cite a reuse finding); at most one dependency-impact note per PR, phrased as something to verify, because without diffs an asserted effect would be a guess. Checked on Northwind dev PRs only.
 - 2026-10-15 20:10 — Owner answered (Telegram): go with the recommendation = NO. Backup key is NOT used for index embeddings; plan A and its schedule (full coverage Oct 19 00:05 UTC) stay as pinned. `EMBED_BACKUP_FOR_INDEX` stays off.
