@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 STATE = Path.home() / ".config/lore/hourly_state.json"
 SCHED_PID = Path(os.environ.get("EMBED_SCHEDULE_PID", "/tmp/agent-0/-root-lore-intelligence/"
                  "b5139bff-47bc-4e91-ab42-99c5942473ed/scratchpad/embed_schedule.pid"))
-MODEL = "gemini-embedding-001"
+MODEL = "voyage-4-large"   # OSS corpus embedding model (Voyage AI); the Gemini embedding plan was abandoned 2026-10-16
 INTERVAL = int(os.environ.get("HOURLY_INTERVAL_S", "3600"))
 
 
@@ -45,12 +45,8 @@ def snapshot() -> dict:
         q = c.execute("SELECT exhausted_until, note FROM quota_state WHERE model=%s", (MODEL,)).fetchone()
         used = c.execute("SELECT coalesce(sum(items),0) n FROM embed_usage WHERE model=%s AND kind='index' "
                          "AND day=(now() AT TIME ZONE 'utc')::date", (MODEL,)).fetchone()["n"]
-    alive = False
-    try:
-        os.kill(int(SCHED_PID.read_text()), 0)
-        alive = True
-    except Exception:
-        pass
+    wins = subprocess.run(["tmux", "list-windows", "-t", "lore", "-F", "#{window_name}"], capture_output=True, text=True).stdout.split()
+    alive = "voyage" in wins            # the Voyage pass runs in tmux window lore:voyage
     stored, wanted = sum(r["stored"] for r in rows), sum(r["wanted"] for r in rows)
     until = q["exhausted_until"] if q and q["exhausted_until"] > datetime.now(timezone.utc) else None
     return {"stored": stored, "wanted": wanted, "tiers": coverage_text(rows), "alive": alive,
@@ -62,8 +58,8 @@ def snapshot() -> dict:
 
 def compose(cur: dict, prev: dict | None) -> str:
     now = datetime.now(timezone.utc).strftime("%H:%M UTC")
-    state = (f"embedding scheduler {'running' if cur['alive'] else 'NOT RUNNING'}"
-             + (f", waiting for quota reset {cur['until']}" if cur["until"] else f", {cur['used_today']}/900 items today"))
+    state = ("Voyage embedding pass " + ("running" if cur["alive"] else "not running")
+             + (f", waiting until {cur['until']}" if cur["until"] else ""))
     if prev and all(cur[k] == prev.get(k) for k in ("stored", "head", "next", "waiting", "note", "alive")):
         extra = f" Waiting on you: {'; '.join(cur['waiting'])}" if cur["waiting"] else ""
         return f"{now} — No change since last update. Coverage {cur['stored']} of {cur['wanted']} chunks; {state}.{extra}"

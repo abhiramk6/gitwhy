@@ -1,7 +1,3 @@
-WAITING for owner's Voyage API key (owner chose Voyage, rejected local OSS embeddings). Then:
- 1. store in ~/.config/lore/voyage.env (VOYAGE_API_KEY=..., mode 600), never in git/chat.
- 2. ONE smoke call (voyage-4-large, 3 short texts), note usage.total_tokens and any rate-limit headers; set VOYAGE_TOKENS_PER_MIN from the observed limit.
- 3. stop the Gemini embed scheduler (ops/embed_schedule.pid) - its corpus is abandoned; keep 832 gemini-embedding-001 vectors unused.
- 4. run EMBED_PROVIDER=embedding voyage pass: PROVIDER=gemini EMBED_PROVIDER=voyage ORG_SLUG=oss-pallets python -m app.retrieval.embed (tier order, no retries; stops on 429 and records quota_state).
- 5. report per-tier coverage + real tokens used (usage.total_tokens) vs 200M free; then dev-only partial B once docs tier complete, real B only after 3,550/3,550 AND prompts frozen (owner reply).
-Reports must name the embedding model per corpus (voyage-4-large, 1024-dim) and say OSS results are not predictive of other models.
+Voyage embedding of the OSS corpus is running (about 18 chunks/min, target now 4,382 chunks incl. 832 comment chunks); Northwind is embedded after it.
+Then: second OSS pass for the comments tier, rebuild the OSS graph for review guidance, dev-only partial B (non-evidential), and a full UI check on the OSS org (:8001).
+Real B and the single held-out run wait for full embeddings AND the owner's OK to freeze prompts.

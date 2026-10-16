@@ -4,12 +4,10 @@ One line per non-trivial decision: what, and why. Newest first. Owner-pending it
 repeated (not re-sent) in each hourly update until answered.
 
 ## Waiting on owner
-_(Voyage key received 2026-10-16 05:25 UTC; nothing waiting on the owner for embeddings.)_
+_none blocking._
 
-_nothing else blocking._ (Owner asked about paid-tier embedding cost; estimate sent, ~$0.25 for 3,550 chunks; awaiting his explicit yes before any billing change. Plan A continues meanwhile.)
-
-Also, one-time ask at the next milestone (dev-only partial B): review of the OSS dev lists and
-`excluded_subjects`, which are **agent-confirmed, not human-reviewed**.
+One-time ask at the dev-only partial-B milestone: review of the OSS dev lists and `excluded_subjects` (agent-confirmed, not human-reviewed).
+Later, after full embeddings: OK to freeze prompts, then the real B and the single held-out run (I will ask; nothing runs before the reply).
 
 ## Log (UTC, server clock)
 - 2026-10-16 06:05 — UI v1 built and screenshots (8 flows, viewport-only) sent to the owner. A fresh reviewer model critiqued docs/UX.md; adopted: top bar instead of rail, Provenance Column shared by every flow with jumps to Memory/Trace, vertical strata bar instead of a sparkline, tags as separate glyph/name/date units (no dotted meta strings), blue only for links, quoted source words in a serif, starter questions from data, copy actions instead of "approve", partial-evidence and model-unavailable states, discarded statements visible. Not done from the critique: stale-data banner, mobile bottom-sheet verification, per-statement feedback. Servers: Northwind on :8000, OSS on :8001 (tmux api, api-oss; old servers replaced). Voyage embedding continues; Northwind and the OSS comment tier still need a Voyage pass after the main one.
