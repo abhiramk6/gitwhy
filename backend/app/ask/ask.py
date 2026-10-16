@@ -35,6 +35,20 @@ def _who_when(conn, org: int, rec_ids: list[int]) -> dict[int, dict]:
     return out
 
 
+def _fact_sources(conn, org: int, facts: list[Hit]) -> dict[int, dict]:
+    """A derived fact points at the record it came from: carry that record's author, date and original words."""
+    out = {}
+    for h in facts:
+        r = conn.execute("SELECT payload, body, source_url FROM source_records WHERE organization_id=%s AND "
+                         "source_type=%s AND source_id=%s", (org, h.source_type, h.source_id)).fetchone()
+        if r:
+            p = r["payload"] or {}
+            out[h.id] = {"author": p.get("author") or p.get("assignee"),
+                         "date": p.get("date") or p.get("merged_at") or p.get("updated"), "path": p.get("path"),
+                         "original": (r["body"] or "")[:1200], "url_source": r["source_url"]}
+    return out
+
+
 def _citation(h: Hit, meta: dict) -> dict:
     return {"id": h.ref, "label": _label(h), "status": h.status, "source_type": h.source_type, "source_id": h.source_id,
             "title": h.title, "url": h.source_url, "repo": h.repo, "excerpt": h.snippet[:1200], **meta}
@@ -52,7 +66,8 @@ def ask(conn: psycopg.Connection, org: int, provider: Provider, question: str,
         return {"status": "llm_required", "question": question, "answer": [], "citations": [], "retrieval": smeta,
                 "note": "Asking needs a model; configure PROVIDER=gemini or vertex."}
     who = _who_when(conn, org, [h.id for h in hits if h.kind == "record"])
-    cites = {h.ref: _citation(h, who.get(h.id, {}) if h.kind == "record" else {}) for h in hits}
+    fsrc = _fact_sources(conn, org, [h for h in hits if h.kind == "fact"])
+    cites = {h.ref: _citation(h, who.get(h.id, {}) if h.kind == "record" else fsrc.get(h.id, {})) for h in hits}
     if not cites:
         return {"status": "insufficient", "question": question, "answer": [], "citations": [], "retrieval": smeta,
                 "note": "Nothing in the organization's sources matched this question."}
@@ -60,7 +75,7 @@ def ask(conn: psycopg.Connection, org: int, provider: Provider, question: str,
                "earlier_turns": [{"question": t.get("question"), "answer": t.get("text")} for t in history],
                "evidence": [{"id": c["id"], "type": c["source_type"], "status": c["status"], "title": c["title"],
                              "author": c.get("author"), "date": c.get("date"), "path": c.get("path"),
-                             "text": c["excerpt"]} for c in cites.values()]}
+                             "text": c["excerpt"], "original_words": c.get("original")} for c in cites.values()]}
     try:
         res = run_task(conn, org, provider, "ask", T.ASK["system"], payload, T.ASK["schema"])
     except LLMUnavailable as exc:
