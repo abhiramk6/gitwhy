@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=None, extra="ignore")
 
-    database_url: str = "postgresql://lore@127.0.0.1:5432/lore"
+    database_url: str = "postgresql://gitwhy@127.0.0.1:5432/gitwhy"
     environment: str = "local"
     demo_mode: bool = True  # model judgments are cached in llm_judgments and replayed when present
     org_slug: str = "northwind"
