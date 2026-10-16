@@ -1,3 +1,3 @@
-Voyage embedding of the OSS corpus is running (about 18 chunks/min, target now 4,382 chunks incl. 832 comment chunks); Northwind is embedded after it.
-Then: second OSS pass for the comments tier, rebuild the OSS graph for review guidance, dev-only partial B (non-evidential), and a full UI check on the OSS org (:8001).
+Voyage pass is healthy: 768 chunks by 06:10 UTC, about 18.5 chunks/min. First pass (3,550 chunks) ETA about 08:40 UTC; the 832 comment chunks and Northwind follow in a second pass (about 09:30-10:30 UTC).
+Then: rebuild the OSS graph for review guidance, dev-only partial B (non-evidential, after the docs tier, about 07:45 UTC), UI check on the OSS org (:8001).
 Real B and the single held-out run wait for full embeddings AND the owner's OK to freeze prompts.
