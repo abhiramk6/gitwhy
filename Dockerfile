@@ -4,6 +4,7 @@ WORKDIR /ui
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
+COPY product.json /product.json
 RUN npm run build
 
 FROM python:3.12-slim
@@ -12,6 +13,7 @@ WORKDIR /app
 RUN pip install fastapi "uvicorn[standard]" "psycopg[binary]" pydantic-settings google-genai
 COPY backend/app ./backend/app
 COPY migrations ./migrations
+COPY product.json ./product.json
 COPY fixtures ./fixtures
 COPY --from=ui /ui/dist ./frontend/dist
 WORKDIR /app/backend

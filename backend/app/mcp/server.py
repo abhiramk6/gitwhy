@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Response
 from fastapi.encoders import jsonable_encoder
 
 from ..api import service
+from ..product import product
 from ..api.deps import get_conn, get_org_id, get_provider, require_write
 from ..models.provider import Provider
 
@@ -79,7 +80,7 @@ def mcp(msg: dict, response: Response, conn: psycopg.Connection = Depends(get_co
     if method == "initialize":
         return {"jsonrpc": "2.0", "id": id_, "result": {
             "protocolVersion": PROTOCOL_VERSION, "capabilities": {"tools": {}},
-            "serverInfo": {"name": "gitwhy", "version": "0.1.0"}}}
+            "serverInfo": {"name": product()["slug"], "version": "0.1.0"}}}
     if method == "ping":
         return {"jsonrpc": "2.0", "id": id_, "result": {}}
     if method == "tools/list":

@@ -14,6 +14,8 @@ cd backend && .venv/bin/python -m app.seed         # migrate + ingest + graph + 
 .venv/bin/uvicorn app.main:app --port 8000         # UI + API + MCP at http://127.0.0.1:8000
 cd ../frontend && npm ci && npm run build          # (UI is served from frontend/dist)
 ```
+Rename the product in one place: `product.json` (name, slug, tagline) drives the UI brand and page title, API title, MCP server name and `/api/meta`.
+
 Tests: `cd backend && .venv/bin/python -m pytest -q` · Fixture check: `python3 scripts/validate_synthetic_org.py`
 · Eval: `python3 scripts/evaluate.py` · Browser flows: `node frontend/e2e/flows.mjs <out-dir>` (needs playwright-core).
 

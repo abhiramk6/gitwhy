@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import product from '@product'
 import { api, getToken, setToken } from './api.js'
 import { Column, ColumnProvider, go, useColumn, useRoute } from './ui.jsx'
 import Ask from './pages/Ask.jsx'
@@ -28,7 +29,7 @@ function Shell() {
   return (
     <div className="app">
       <header className="top">
-        <div className="brand">Gitwhy<small>why your code is the way it is</small></div>
+        <div className="brand">{product.name}<small>{product.tagline}</small></div>
         <nav className="nav" aria-label="Main">
           {NAV.slice(0, 5).map(([k, l]) => <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''}>{l}</a>)}
           <span className="gap" />

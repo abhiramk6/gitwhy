@@ -262,3 +262,9 @@ def archaeology_explain(repo: str = Query(min_length=1), path: str = Query(min_l
     if out is None:
         raise HTTPException(404, "file not found")
     return out
+
+
+@router.get("/meta")
+def meta():
+    from ..product import product
+    return product()
