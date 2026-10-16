@@ -59,14 +59,19 @@ def main() -> int:
         for n, (repo, num, kind) in enumerate(todo, 1):
             api = "https://api.github.com/repos/" + urls[repo].split("github.com/")[1]
             got = []
-            if kind == "pr":
-                for c in pages(f"{api}/pulls/{num}/comments", token):
-                    got.append(("review_comment", c, c.get("path")))
-                for r in pages(f"{api}/pulls/{num}/reviews", token):
-                    if (r.get("body") or "").strip():
-                        got.append(("review", r, None))
-            for c in pages(f"{api}/issues/{num}/comments", token):
-                got.append(("pr_comment" if kind == "pr" else "issue_comment", c, None))
+            try:
+                if kind == "pr":
+                    for c in pages(f"{api}/pulls/{num}/comments", token):
+                        got.append(("review_comment", c, c.get("path")))
+                    for r in pages(f"{api}/pulls/{num}/reviews", token):
+                        if (r.get("body") or "").strip():
+                            got.append(("review", r, None))
+                for c in pages(f"{api}/issues/{num}/comments", token):
+                    got.append(("pr_comment" if kind == "pr" else "issue_comment", c, None))
+            except urllib.error.HTTPError as e:
+                if e.code not in (404, 410):      # a deleted/transferred thread is skipped; limits and auth stop the run
+                    raise
+                print(f"skip {repo}#{num}: HTTP {e.code}", file=sys.stderr)
             for k, c, path in got:
                 rows.append({"repo": repo, "number": num, "kind": k, "id": c["id"],
                              "author": (c.get("user") or {}).get("login"),
