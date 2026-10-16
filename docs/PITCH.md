@@ -57,7 +57,8 @@ Python and FastAPI, Postgres with pgvector, React. Gemini for reading and writin
 - Quality at scale and with a stronger model is not yet measured.
 
 ## 11. Honest limits
-- Pull requests are read at file level; diffs are not ingested, so reviews never claim line-level facts.
+- A review names a line only where the stored diff shows it (diffs come from GitHub sync; PRs without a diff stay at file level).
+- Time saved is not claimed: the Results page shows measured, rated and estimated figures apart, and a comparison with manual search only after 5 questions are timed both ways.
 - Python code is understood structurally; other languages are searchable text.
 - Free-tier model quotas make big organizations slow; paid quotas fix this.
 - Customer data is sent to the model providers; customers must accept that.

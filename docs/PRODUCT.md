@@ -26,6 +26,11 @@ code, and it answers (and reviews) with the exact source of every claim.
 7. ○ **Code archaeology** — "why does this code look like this?" walk: code → PR → review thread → ticket → ADR.
 8. ○ **Staleness alerts** — superseded decisions still cited in code; contradictions between sources.
 9. ○ **MCP access** — the same answers inside IDE agents (exists).
+10. ● **Decision-aware PR review** — earlier decision with who/when, the line in the PR (only where the stored diff shows it), why they conflict, a suggested comment.
+11. ● **Results** — measured, rated and estimated figures kept apart; timed tasks; no time saving claimed before it is tested.
+12. ● **Impact** — "if I change X, what else could break?" from the dependency graph plus the decisions and reviewer words that apply, with a map.
+13. ● **Departure view** — what would be hard to replace if a person were unavailable; counts and documentation coverage, never "owner" from file history alone.
+14. ● **Plan with acceptance criteria** — every task has "done when" statements with sources.
 
 ## Trust rules (non-negotiable)
 - No claim without a citation that exists. Trust labels (verified / inferred / proposed) are derived from the evidence, never from the model.

@@ -19,4 +19,11 @@ Setup: `PROVIDER=gemini ORG_SLUG=northwind` (see README). Everything below is li
 7. **Sources** — what was read, which embedding model indexes it, limits stated plainly.
 
 What to say about trust: statements with no valid source are dropped before you see them; labels (verified / inferred) come from the
-evidence, not from the model; PR review is file-level (diffs are not ingested); nothing is posted to GitHub.
+evidence, not from the model; a PR review names a line only where the stored diff shows it; nothing is posted to GitHub.
+
+## Added moments (Rishika's plan)
+8. **Review, line level** — `payments-api#11`: the card shows Priya's words (who, when), the line in the diff, why they conflict and the suggested comment.
+9. **Impact** — "If I change the ledger-core service, what else could break?": callers from the graph, the outbox and integer-money rules with their quotes, the bus-factor risk, a small map.
+10. **People** — Dana: components, "little or nothing written down", handover actions. Commit history shows who changed a file, not who understands it.
+11. **Results** — measured / rated / estimate kept apart; run one timed task (by hand, then Gitwhy). No saving is claimed before 5 paired tasks.
+12. **Plan** — each task now has "Done when" criteria with sources.
