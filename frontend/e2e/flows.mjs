@@ -44,7 +44,7 @@ await run('people', async () => {
   await page.waitForSelector('.headline', { timeout: 120000 }); await shot('05-people-handover')
 })
 await run('plan', async () => {
-  await page.goto(BASE + '/#/plan'); await page.click('button:has-text("Plan it")'); await page.waitForSelector('.tasks', { timeout: 180000 }); await shot('06-plan')
+  await page.goto(BASE + '/#/plan'); await page.click('button:has-text("Plan it")'); await page.waitForSelector('.tasks', { timeout: 180000 }); await shot('06-plan'); await page.locator('.tasks').scrollIntoViewIfNeeded(); await shot('06b-plan-tasks')
 })
 await run('trace', async () => {
   await page.goto(BASE + '/#/trace?f=' + encodeURIComponent('notify-svc:notify/dedupe.py')); await page.waitForSelector('.headline', { timeout: 120000 }); await shot('07-trace')
