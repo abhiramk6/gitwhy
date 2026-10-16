@@ -95,14 +95,28 @@ def record_usage(conn: psycopg.Connection, model: str, kind: str, items: int) ->
                  (model, kind, items))
 
 
+CHARS_PER_TOKEN = 3.0  # same over-estimate the provider uses for request sizing
+
+
+def est_spend_tokens(conn: psycopg.Connection, model: str) -> int:
+    r = conn.execute("SELECT est_tokens FROM embed_spend WHERE model=%s", (model,)).fetchone()
+    return int(r["est_tokens"]) if r else 0
+
+
+def record_spend(conn: psycopg.Connection, model: str, tokens: int) -> None:
+    conn.execute("INSERT INTO embed_spend (model, est_tokens) VALUES (%s, %s) ON CONFLICT (model) DO UPDATE SET "
+                 "est_tokens = embed_spend.est_tokens + EXCLUDED.est_tokens, updated_at = now()", (model, tokens))
+
+
 def exhausted_until(conn: psycopg.Connection, model: str):
     r = conn.execute("SELECT exhausted_until FROM quota_state WHERE model=%s AND exhausted_until > now()", (model,)).fetchone()
     return r["exhausted_until"] if r else None
 
 
-def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider, budget: int | None = None) -> dict:
+def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider, budget: int | None = None,
+              max_usd: float | None = None, price_per_mtok: float = 0.15) -> dict:
     """Embed missing/changed chunks in tier order. `budget` caps items sent in this call (None = unlimited). Stops
-    cleanly on budget or a hard quota; never loops or retries on its own. Progress commits per batch."""
+    cleanly on budget, a hard quota or (paid mode) the dollar cap `max_usd`; never loops or retries on its own. Progress commits per batch."""
     if not provider.semantic_embeddings:
         return {"candidates": 0, "embedded": 0, "cached": 0, "skipped": "provider has no semantic embeddings"}
     want = wanted_chunks(conn, org_id)
@@ -131,6 +145,11 @@ def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider, budget:
                 stopped = f"daily budget of {budget} items reached"
                 break
             part = part[:room]
+        if max_usd is not None:
+            est = int(sum(len(v[3]) for _, v in part) / CHARS_PER_TOKEN) + 1
+            if (est_spend_tokens(conn, provider.embed_model) + est) * price_per_mtok / 1e6 > max_usd:
+                stopped = f"spend cap ${max_usd:.2f} reached (estimated)"
+                break
         try:
             vecs = provider.embed([v[3] for _, v in part])
         except QuotaExhausted as exc:
@@ -149,6 +168,8 @@ def embed_org(conn: psycopg.Connection, org_id: int, provider: Provider, budget:
                 (org_id, t, i, c, s, e, h, provider.embed_model, _vec(vec)))
         sent += len(part)
         record_usage(conn, provider.embed_model, "index", len(part))  # only items the API accepted
+        if max_usd is not None:
+            record_spend(conn, provider.embed_model, int(sum(len(v[3]) for _, v in part) / CHARS_PER_TOKEN) + 1)
         conn.commit()  # progress survives an interrupted run; unchanged chunks are skipped on the next one
         if budget is not None and sent >= budget and sent < len(todo_run):
             stopped = f"daily budget of {budget} items reached"
@@ -172,12 +193,18 @@ def main() -> int:
     prov = make_provider(s)
     with connect() as conn:
         org = conn.execute("SELECT id FROM organizations WHERE slug=%s", (s.org_slug,)).fetchone()["id"]
-        budget = a.budget if a.budget is not None else max(0, s.embed_daily_budget - used_today(conn, prov.embed_model))
-        res = embed_org(conn, org, prov, budget=budget)
+        if s.embed_paid:  # no item cap on the paid tier; the dollar cap is the guard
+            budget = a.budget
+            res = embed_org(conn, org, prov, budget=budget, max_usd=s.embed_max_usd, price_per_mtok=s.embed_price_per_mtok)
+            res["est_spend_usd"] = round(est_spend_tokens(conn, prov.embed_model) * s.embed_price_per_mtok / 1e6, 4)
+            res["spend_cap_usd"] = s.embed_max_usd
+        else:
+            budget = a.budget if a.budget is not None else max(0, s.embed_daily_budget - used_today(conn, prov.embed_model))
+            res = embed_org(conn, org, prov, budget=budget)
         res["budget_this_pass"] = budget
         res["coverage_text"] = coverage_text(res["coverage"])
         res["used_today_index"] = used_today(conn, prov.embed_model)
-        if (res["stopped"] or "").startswith("hard quota") and res["used_today_index"] < budget:
+        if (res["stopped"] or "").startswith("hard quota") and budget is not None and res["used_today_index"] < budget:
             # The API cap was hit before our own ledger predicted it: record it for the owner, stop for the day.
             note = (f"cap hit EARLY: API refused after {res['used_today_index']} accepted index items today "
                     f"(ledger budget {budget}); embedding stopped for the day")

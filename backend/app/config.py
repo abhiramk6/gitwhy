@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # Free-tier embedding cap is 1,000 items/day/model: index at most this many per day, reserve the rest for queries.
     embed_daily_budget: int = 900
     embed_query_reserve: int = 100
+    # Paid tier (only after the owner enabled billing): no daily item cap, but a hard dollar cap on estimated spend.
+    # Tokens are over-estimated (3 chars/token), so the real bill is at or below the estimate.
+    embed_paid: bool = False
+    embed_max_usd: float = 0.50
+    embed_price_per_mtok: float = 0.15  # USD per 1M input tokens, remembered list price for gemini-embedding-001, unverified
 
     # Candidate-pool and prompt budgets (cost/latency controls, not relevance rules; relevance is the model's job).
     rerank_pool: int = 30

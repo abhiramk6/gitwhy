@@ -122,6 +122,19 @@ def test_hard_quota_is_recorded_and_not_retried(conn):
     assert prov2.n == 0 and "quota exhausted until" in res2["stopped"]
 
 
+def test_paid_mode_stops_at_the_dollar_cap_and_ledger_persists(conn):
+    from app.retrieval.embed import embed_org, est_spend_tokens
+    org = _seed_tiers(conn)
+    prov = Recording()
+    # price chosen so each ~10-char chunk costs ~$0.01 (4 tokens est. at $2,500/M); cap $0.03 stops before the 4th batch item
+    res = embed_org(conn, org, prov, max_usd=0.03, price_per_mtok=2500.0)
+    assert "spend cap" in res["stopped"] and res["pending"] > 0
+    assert est_spend_tokens(conn, prov.embed_model) * 2500.0 / 1e6 <= 0.03          # never exceeds the cap
+    n = prov.n
+    res2 = embed_org(conn, org, prov, max_usd=0.03, price_per_mtok=2500.0)          # cap is cumulative across passes
+    assert prov.n == n and "spend cap" in res2["stopped"]
+
+
 def test_search_degrades_to_lexical_when_query_embedding_quota_is_exhausted(conn):
     from app.models.provider import QuotaExhausted
     from app.retrieval.embed import embed_org
