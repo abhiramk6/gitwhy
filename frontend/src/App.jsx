@@ -28,7 +28,7 @@ function Shell() {
   return (
     <div className="app">
       <header className="top">
-        <div className="brand">LORE<small>what your engineering org knows</small></div>
+        <div className="brand">Gitwhy<small>why your code is the way it is</small></div>
         <nav className="nav" aria-label="Main">
           {NAV.slice(0, 5).map(([k, l]) => <a key={k} href={`#/${k}`} className={page === k ? 'on' : ''}>{l}</a>)}
           <span className="gap" />

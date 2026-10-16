@@ -3,7 +3,7 @@
 Updated: 2026-10-15
 
 ## Done
-- Plan cleaned (docs/PLAN.md); decisions D1-D10 logged (docs/decisions.md) incl. LORE audit.
+- Plan cleaned (docs/PLAN.md); decisions D1-D10 logged (docs/decisions.md) incl. reference-project audit.
 - Toolchain installed: Postgres 16 + pgvector 0.6.0, Node 18, gcloud, gh, tmux, Python venv (backend/.venv).
 - Stage 0 foundation: migrations/001_init.sql, FastAPI /health + /health/db, 5 passing tests (idempotent migrations).
 - Stage 1 synthetic org: scripts/generate_synthetic_org.py + validate_synthetic_org.py; fixtures/northwind committed;
@@ -11,7 +11,7 @@ Updated: 2026-10-15
 - Stage 2 ingestion: app/ingestion (idempotent, cursors, runs); rerun = 0 new.
 - Stage 3 graph: app/knowledge/build_graph.py (entities/edges/facts w/ provenance + evidence_type, stale-fact retirement),
   app/graph/impact.py (bounded recursive-CTE traversal). 21 tests pass. PR bypass uses diff-derived `adds_imports`.
-- Telegram: group "Cb" paired; tmux session `lore` (agent + bridge + shell).
+- Telegram: group "Cb" paired; tmux session `gitwhy` (agent + bridge + shell).
 
 ## Blocked on owner (via Telegram)
 - Rotate bot token; GitHub login (private repo); GCP free-trial + gcloud login; collaborator usernames.
@@ -37,12 +37,12 @@ Updated: 2026-10-15
 
 ## Notes
 - Uncommitted but deliberate (bridge hardening by earlier process): ops/notify.sh, ops/telegram_bridge.sh.
-- Bridge targets live agent pane lore:shell.0; lore:agent is stuck at folder-trust prompt (harmless, idle).
+- Bridge targets live agent pane gitwhy:shell.0; gitwhy:agent is stuck at folder-trust prompt (harmless, idle).
 - Incident 2026-10-15: a resumed session with stale context overwrote Stage 1 scripts; restored from git (HEAD).
   Before editing, check `git log -5` and `git status` to confirm what already exists.
 
 ## Local run
-- `set -a; source ~/.config/lore/db.env; set +a; cd backend; .venv/bin/python -m pytest -q`
+- `set -a; source ~/.config/gitwhy/db.env; set +a; cd backend; .venv/bin/python -m pytest -q`
 - `.venv/bin/python -m app.db` (migrate), `.venv/bin/uvicorn app.main:app`
 
 ## Channel
@@ -56,10 +56,10 @@ Updated: 2026-10-15
   delivered as background events, not user input).
 
 ## Persistence (tmux)
-- tmux session `lore`: window `agent` (agent --resume b5139bff-…, cwd /root), window `bridge`
+- tmux session `gitwhy`: window `agent` (agent --resume b5139bff-…, cwd /root), window `bridge`
   (ops/telegram_bridge.sh — owner-only Telegram -> agent pane, prefixed "[Telegram from owner]"),
   window `shell`.
-- Attach: `tmux attach -t lore`; detach: Ctrl-b d. First attach needs "Yes, I trust this folder" once.
+- Attach: `tmux attach -t gitwhy`; detach: Ctrl-b d. First attach needs "Yes, I trust this folder" once.
 - Telegram poller Monitor is NOT used with the bridge (two getUpdates readers conflict).
 
 ## Open-source demo (2026-10-15)
@@ -73,5 +73,5 @@ Updated: 2026-10-15
 - Removed rule-based pseudo-intelligence (see docs/heuristics-audit.md, decisions D11). New: app/intelligence/{tasks,judge}.py,
   app/knowledge/judgments.py, chunk-level embeddings, migration 002, provider has_llm/semantic_embeddings flags.
 - NO model has run yet (no credentials). 51 tests pass with a scripted model (tests/fake_model.py).
-- Needs owner: GEMINI_API_KEY in ~/.config/lore/gemini.env (or Vertex login). Then: PROVIDER=gemini, python -m app.seed
+- Needs owner: GEMINI_API_KEY in ~/.config/gitwhy/gemini.env (or Vertex login). Then: PROVIDER=gemini, python -m app.seed
   (both orgs), python scripts/evaluate.py, scripts/oss_cases.py, scripts/oss_probe.py; confirm model names.

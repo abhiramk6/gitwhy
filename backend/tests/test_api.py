@@ -111,7 +111,7 @@ def test_mcp_requires_token(client):
 
 def test_mcp_handshake_list_and_call(client):
     init = _rpc(client, "initialize").json()["result"]
-    assert init["capabilities"] == {"tools": {}} and init["serverInfo"]["name"] == "lore-intelligence"
+    assert init["capabilities"] == {"tools": {}} and init["serverInfo"]["name"] == "gitwhy"
     assert client.post("/mcp", headers=TOKEN, json={"jsonrpc": "2.0", "method": "notifications/initialized"}).status_code == 202
     tools = {t["name"] for t in _rpc(client, "tools/list").json()["result"]["tools"]}
     assert tools == {"search_context", "get_repo_overview", "get_dependencies", "get_decisions",

@@ -114,7 +114,7 @@ def chunk_doc(rel: str, text: str, min_len: int = 4000) -> list[tuple[str, str]]
 
 def api(url: str) -> list[dict]:
     req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json",
-                                               "User-Agent": "lore-intelligence-oss-demo"})
+                                               "User-Agent": "gitwhy-oss-demo"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.load(r)
 

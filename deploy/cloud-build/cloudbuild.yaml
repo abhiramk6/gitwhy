@@ -1,11 +1,11 @@
 # Build and push the image. Deploy steps are run by deploy/deploy.sh after the owner approves billable resources.
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ["build", "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/lore/app:${SHORT_SHA}",
-           "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/lore/app:latest", "."]
+    args: ["build", "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/gitwhy/app:${SHORT_SHA}",
+           "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/gitwhy/app:latest", "."]
 images:
-  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/lore/app:${SHORT_SHA}"
-  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/lore/app:latest"
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/gitwhy/app:${SHORT_SHA}"
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/gitwhy/app:latest"
 substitutions:
   _REGION: us-central1
 options:

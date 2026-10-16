@@ -1,4 +1,4 @@
-# LORE Intelligence
+# Gitwhy
 
 Evidence-backed feature planning on an organizational knowledge graph. Synthetic demo organization
 ("Northwind Labs", 5 repos, 42 tickets, 55 PRs, 8 ADR files) — no real people or customer data.
@@ -9,7 +9,7 @@ ordered task plan — every claim labelled **verified / inferred / proposed** an
 
 ## Run locally
 ```bash
-set -a; source ~/.config/lore/db.env; set +a      # DATABASE_URL (Postgres 16 + pgvector)
+set -a; source ~/.config/gitwhy/db.env; set +a      # DATABASE_URL (Postgres 16 + pgvector)
 cd backend && .venv/bin/python -m app.seed         # migrate + ingest + graph + embeddings (idempotent)
 .venv/bin/uvicorn app.main:app --port 8000         # UI + API + MCP at http://127.0.0.1:8000
 cd ../frontend && npm ci && npm run build          # (UI is served from frontend/dist)
@@ -23,7 +23,7 @@ Tests: `cd backend && .venv/bin/python -m pytest -q` · Fixture check: `python3 
 
 ## Safety model
 Writes (`/api/plans`, `/api/memory/*`, curation, `/mcp`) require `X-Demo-Token` (or Bearer). With no token
-configured they are accepted only when `ENVIRONMENT=local`. Secrets live in `~/.config/lore` and Secret Manager.
+configured they are accepted only when `ENVIRONMENT=local`. Secrets live in `~/.config/gitwhy` and Secret Manager.
 LLM output is accepted only if every evidence id exists in the plan's evidence registry.
 
 See `docs/PLAN.md`, `docs/decisions.md`, `docs/demo-script.md`, `docs/eval-report.md`, `docs/operations.md`.

@@ -2,7 +2,7 @@
 """Fetch the human discussion around PRs and issues from public GitHub: review comments (inline, with file/line context),
 PR conversation comments, review summaries, and issue comments. Output: <fixture>/history/discussion.json
   [{"repo","number","kind": "review_comment|pr_comment|review|issue_comment","id","author","date","body","path","url","in_reply_to"}]
-Resumable (appends per PR, skips PRs already fetched). Read-only against GitHub; token from GH_TOKEN (~/.config/lore/github.env).
+Resumable (appends per PR, skips PRs already fetched). Read-only against GitHub; token from GH_TOKEN (~/.config/gitwhy/github.env).
 No retry loops: a 403/429 stops the run and says when the limit resets.
 Usage: fetch_pr_discussion.py --fixture /root/oss-fixture
 """
@@ -20,7 +20,7 @@ from pathlib import Path
 
 def get(url: str, token: str):
     req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "Authorization": f"Bearer {token}",
-                                               "User-Agent": "lore-intelligence-oss-demo", "X-GitHub-Api-Version": "2022-11-28"})
+                                               "User-Agent": "gitwhy-oss-demo", "X-GitHub-Api-Version": "2022-11-28"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.load(r)
 

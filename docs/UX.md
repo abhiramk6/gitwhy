@@ -1,4 +1,4 @@
-# LORE Intelligence — UX plan (v1, for review)
+# Gitwhy — UX plan (v1, for review)
 
 Companion to `PRODUCT.md`. Design direction follows the `frontend-design` skill.
 

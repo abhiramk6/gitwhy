@@ -1,4 +1,4 @@
--- LORE Intelligence: initial schema (Stage 0).
+-- Gitwhy: initial schema (Stage 0).
 -- Three layers: raw evidence (source_records), canonical graph (entities/edges), curated knowledge (facts).
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;

@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'lore_demo_token'
+const TOKEN_KEY = 'gitwhy_demo_token'
 
 export const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || '' } catch { return '' } }
 export const setToken = (t) => { try { localStorage.setItem(TOKEN_KEY, t) } catch { /* private mode */ } }

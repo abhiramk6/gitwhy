@@ -3,7 +3,7 @@
  - each pass runs once; a pass that errors (anything but 'done', 'budget reached' or 'quota exhausted') stops the schedule
    and notifies, it is never retried;
  - between passes it sleeps until the API's own reset time (quota_state) or the next UTC midnight, +5 min.
-Env: DATABASE_URL, GEMINI_API_KEY (+ ~/.config/lore/telegram.env for notify.sh). Model = gemini-embedding-001.
+Env: DATABASE_URL, GEMINI_API_KEY (+ ~/.config/gitwhy/telegram.env for notify.sh). Model = gemini-embedding-001.
 """
 import json
 import os

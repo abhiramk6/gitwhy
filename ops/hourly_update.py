@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Hourly status to the Telegram group: at most 5 short lines, or one line if nothing changed.
 
-Runs as its own process (tmux window lore:hourly), independent of any agent session, so it keeps firing while the
+Runs as its own process (tmux window gitwhy:hourly), independent of any agent session, so it keeps firing while the
 session is idle or its usage limit is hit. It does not survive a host reboot. Everything is read mechanically:
   - coverage and quota state from the database, scheduler liveness from its pid file,
   - commits since the last update from git, owner-pending items from DECISIONS.md ('## Waiting on owner'),
@@ -17,9 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
-STATE = Path.home() / ".config/lore/hourly_state.json"
-SCHED_PID = Path(os.environ.get("EMBED_SCHEDULE_PID", "/tmp/agent-0/-root-lore-intelligence/"
-                 "b5139bff-47bc-4e91-ab42-99c5942473ed/scratchpad/embed_schedule.pid"))
+STATE = Path.home() / ".config/gitwhy/hourly_state.json"
 MODEL = "voyage-4-large"   # OSS corpus embedding model (Voyage AI); the Gemini embedding plan was abandoned 2026-10-16
 INTERVAL = int(os.environ.get("HOURLY_INTERVAL_S", "3600"))
 
@@ -45,8 +43,8 @@ def snapshot() -> dict:
         q = c.execute("SELECT exhausted_until, note FROM quota_state WHERE model=%s", (MODEL,)).fetchone()
         used = c.execute("SELECT coalesce(sum(items),0) n FROM embed_usage WHERE model=%s AND kind='index' "
                          "AND day=(now() AT TIME ZONE 'utc')::date", (MODEL,)).fetchone()["n"]
-    wins = subprocess.run(["tmux", "list-windows", "-t", "lore", "-F", "#{window_name}"], capture_output=True, text=True).stdout.split()
-    alive = "voyage" in wins            # the Voyage pass runs in tmux window lore:voyage
+    wins = subprocess.run(["tmux", "list-windows", "-t", "gitwhy", "-F", "#{window_name}"], capture_output=True, text=True).stdout.split()
+    alive = "voyage" in wins            # the Voyage pass runs in tmux window gitwhy:voyage
     stored, wanted = sum(r["stored"] for r in rows), sum(r["wanted"] for r in rows)
     until = q["exhausted_until"] if q and q["exhausted_until"] > datetime.now(timezone.utc) else None
     return {"stored": stored, "wanted": wanted, "tiers": coverage_text(rows), "alive": alive,

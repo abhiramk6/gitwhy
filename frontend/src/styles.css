@@ -1,4 +1,4 @@
-/* LORE: design system. Strata palette: source types are rocks, status is a mark, blue is only for links. */
+/* Gitwhy: design system. Strata palette: source types are rocks, status is a mark, blue is only for links. */
 :root {
   --chalk: #e9edef; --paper: #f8f9fa; --ink: #17212b; --slate: #566676; --rule: #cdd5db; --wash: #dfe5e9;
   --link: #2c4aa8;

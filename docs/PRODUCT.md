@@ -1,4 +1,4 @@
-# LORE Intelligence — product definition
+# Gitwhy — product definition
 
 **One sentence:** the memory of an engineering organization — it has read every PR, review comment, ticket, commit, doc and line of
 code, and it answers (and reviews) with the exact source of every claim.

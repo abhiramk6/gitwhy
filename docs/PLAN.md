@@ -1,4 +1,4 @@
-# LORE Intelligence — Cleaned Plan (v2)
+# Gitwhy — Cleaned Plan (v2)
 
 Evidence-backed feature planning on top of an organizational knowledge graph.
 Built on GCP (Cloud Run + Cloud SQL/pgvector + Vertex AI Gemini). Demo data is a synthetic org.
@@ -13,7 +13,7 @@ with every claim linked to evidence and labeled verified / inferred / proposed.
 
 | # | Decision | Choice | Why |
 |---|----------|--------|-----|
-| D1 | LORE reuse | **Concepts only; no code copy.** Audit repo for license + what actually works, record in `docs/decisions.md` | Archived, TypeScript, tied to one model vendor; our stack is Python + Gemini |
+| D1 | Reference-project reuse | **Concepts only; no code copy.** Audit repo for license + what actually works, record in `docs/decisions.md` | Archived, TypeScript, tied to one model vendor; our stack is Python + Gemini |
 | D2 | Backend | Python / FastAPI **modular monolith**; MCP server is a route in the same service | One deployable, fastest to ship |
 | D3 | Model | Gemini via Vertex AI behind a thin `models/` adapter; embeddings via Vertex | Required by GCP target |
 | D4 | Database | Cloud SQL Postgres + pgvector; graph = `entities` + `edges` tables, bounded recursive CTE traversal | No graph DB until measured need |
@@ -106,5 +106,5 @@ no secrets in logs or client bundle · UI has loading/empty/error states · clea
 - Agent never takes irreversible/outward actions without approval: creating billable resources beyond the
   agreed list, pushing to public repos, inviting people, upgrading the GCP account.
 - Account creation that needs phone/CAPTCHA/card is done **by the owner**; agent supplies the exact steps.
-- Private repo only; secrets live in `~/.config/lore/` (mode 600) and Secret Manager — never in git.
+- Private repo only; secrets live in `~/.config/gitwhy/` (mode 600) and Secret Manager — never in git.
 - On usage-limit hit: agent writes `ops/STATE.md` (what's done, what's next), pings Telegram, waits, resumes.

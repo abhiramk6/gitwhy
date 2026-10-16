@@ -6,13 +6,13 @@
 # says so in every message. The authoritative number is Billing > Credits in the console.
 #
 # Usage: PROJECT_ID=... ops/cost_watch.sh [--dry-run]     (run hourly under cron/tmux)
-# Env: CREDIT_USD=300  STOP_AT_PCT=80  SQL_INSTANCE=lore-pg  SQL_HOURLY_USD=0.0150 (db-f1-micro, confirm in pricing)
+# Env: CREDIT_USD=300  STOP_AT_PCT=80  SQL_INSTANCE=gitwhy-pg  SQL_HOURLY_USD=0.0150 (db-f1-micro, confirm in pricing)
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 : "${PROJECT_ID:?set PROJECT_ID}"
 CREDIT_USD="${CREDIT_USD:-300}"; STOP_AT_PCT="${STOP_AT_PCT:-80}"
-SQL_INSTANCE="${SQL_INSTANCE:-lore-pg}"; SQL_HOURLY_USD="${SQL_HOURLY_USD:-0.0150}"
-STATE="${HOME}/.config/lore/cost_state"; mkdir -p "$(dirname "$STATE")"
+SQL_INSTANCE="${SQL_INSTANCE:-gitwhy-pg}"; SQL_HOURLY_USD="${SQL_HOURLY_USD:-0.0150}"
+STATE="${HOME}/.config/gitwhy/cost_state"; mkdir -p "$(dirname "$STATE")"
 DRY="${1:-}"
 say() { if [ "$DRY" = --dry-run ]; then echo "$1"; else "$HERE/notify.sh" "$1"; fi; }
 

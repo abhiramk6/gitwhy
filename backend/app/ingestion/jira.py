@@ -1,6 +1,6 @@
 """Live Jira Cloud connector: issues of one project -> `jira_issue` source records.
 
-    python -m app.ingestion.jira            # reads ~/.config/lore/jira.env (JIRA_SITE, JIRA_EMAIL, JIRA_TOKEN,
+    python -m app.ingestion.jira            # reads ~/.config/gitwhy/jira.env (JIRA_SITE, JIRA_EMAIL, JIRA_TOKEN,
                                             # JIRA_PROJECT) and writes into organization JIRA_ORG_SLUG (default live-demo)
 
 Records have the same shape as the fixture tickets, so the graph builder, search and planner are unchanged.

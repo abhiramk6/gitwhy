@@ -16,6 +16,6 @@ COPY fixtures ./fixtures
 COPY --from=ui /ui/dist ./frontend/dist
 WORKDIR /app/backend
 # Cloud Run supplies $PORT. Non-root user.
-RUN useradd -r -u 10001 lore && chown -R lore /app
-USER lore
+RUN useradd -r -u 10001 gitwhy && chown -R gitwhy /app
+USER gitwhy
 CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

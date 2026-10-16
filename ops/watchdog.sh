@@ -12,7 +12,7 @@ while true; do
   newest=$(( last > st ? last : st ))
   age=$(( ( $(date +%s) - newest ) / 60 ))
   if [ "$age" -ge "$STALE_MIN" ] && [ "$warned" = 0 ]; then
-    "$HERE/notify.sh" "⏳ No progress for ${age} min (no commit / STATE change). Possible causes: usage limit, waiting on you, or stuck. Say 'status' here or check: tmux attach -t lore" || true
+    "$HERE/notify.sh" "⏳ No progress for ${age} min (no commit / STATE change). Possible causes: usage limit, waiting on you, or stuck. Say 'status' here or check: tmux attach -t gitwhy" || true
     warned=1
   elif [ "$age" -lt "$STALE_MIN" ]; then
     warned=0

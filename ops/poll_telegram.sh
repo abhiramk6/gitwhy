@@ -4,8 +4,8 @@
 # (group members may chat, but only the owner's user id can instruct/approve).
 # Unknown chats are reported by id+title ONLY (no content) so the owner can confirm pairing from the DM.
 set -uo pipefail
-source "$HOME/.config/lore/telegram.env"
-OFF_FILE="$HOME/.config/lore/tg_offset"
+source "$HOME/.config/gitwhy/telegram.env"
+OFF_FILE="$HOME/.config/gitwhy/tg_offset"
 [ -f "$OFF_FILE" ] || echo 0 > "$OFF_FILE"
 while true; do
   OFF=$(cat "$OFF_FILE")

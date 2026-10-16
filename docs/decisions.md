@@ -2,8 +2,8 @@
 
 Format: ID · date · status · decision · why. Reversals add a new entry; old entries are never deleted.
 
-## D1 — LORE-OSS reuse: concepts only, no code copy  (2026-10-15, accepted)
-Shallow audit of `re-cinq/lore-oss` (shallow clone, HEAD "Sync with upstream lore — 2026-04-06"):
+## D1 — Reference-project reuse: concepts only, no code copy  (2026-10-15, accepted)
+Shallow audit of an archived open-source reference project (shallow clone, last sync 2026-04-06):
 - **License:** Apache-2.0 → code reuse is legally possible with attribution + NOTICE; not needed now.
 - **Stack:** TypeScript MCP server (`mcp-server/src`), `pg`, `@modelcontextprotocol/sdk`, GCP exporters,
   Vertex AI used in `memory-search.ts`/`ingest.ts`/`db.ts`; A single hosted model vendor is used in `index.ts`,
@@ -12,7 +12,7 @@ Shallow audit of `re-cinq/lore-oss` (shallow clone, HEAD "Sync with upstream lor
   not verified to pass.
 - **Not assumed:** that any spec under `specs/` is fully implemented.
 
-| LORE component | Verdict | Notes |
+| Reference component | Verdict | Notes |
 |---|---|---|
 | `memory-search.ts` (hybrid + graph-augmented) | Concept reuse | Re-implement in Python over our schema |
 | `graph.ts` (live knowledge graph) | Concept reuse | Our edges carry evidence_type/status/validity |
@@ -23,7 +23,7 @@ Shallow audit of `re-cinq/lore-oss` (shallow clone, HEAD "Sync with upstream lor
 | `index.ts` (MCP server) | Replaced | MCP implemented as a FastAPI route (D2) |
 | Vendor-bound `facts.ts` extraction | Replaced | Gemini via provider adapter (D3) |
 
-Revisit if time permits a TS sidecar; default is **no**: LORE is archived, we cannot rely on upstream fixes.
+Revisit if time permits a TS sidecar; default is **no**: the reference project is archived, we cannot rely on upstream fixes.
 
 ## D2 — Backend: Python/FastAPI modular monolith, MCP as a route  (2026-10-15, accepted)
 One deployable. Split only on a measured operational need.
@@ -50,7 +50,7 @@ Amended: the FastAPI service serves the built React app, so there is no separate
 Free-trial account must not be upgraded. Hourly cost watcher posts to Telegram. Billable creation needs owner approval.
 
 ## D10 — Control channel: Telegram group "Cb"; owner-user-id-only instructions  (2026-10-15, accepted by owner)
-tmux session `lore` keeps the agent alive; `ops/telegram_bridge.sh` forwards owner messages. Bot token must be rotated
+tmux session `gitwhy` keeps the agent alive; `ops/telegram_bridge.sh` forwards owner messages. Bot token must be rotated
 (old token exposed in an interactive session).
 
 
