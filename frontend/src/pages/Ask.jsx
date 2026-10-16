@@ -46,7 +46,7 @@ export default function Ask() {
     setTurns((t) => [...t, { q, loading: true }])
     try { const res = await api.ask(q, history); setTurns((t) => t.map((x, k) => (k === i ? { q, res } : x))) }
     catch (err) { setTurns((t) => t.map((x, k) => (k === i ? { q, err } : x))) }
-    setTimeout(() => end.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    setTimeout(() => end.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
   }
   const bt = src.data?.by_type || {}
   const read = [['github_pr', 'PRs'], ['github_comment', 'review comments'], ['jira_issue', 'tickets'], ['adr', 'decisions'], ['file', 'code files']]
@@ -55,8 +55,8 @@ export default function Ask() {
     <div className="stack">
       <div>
         <h1>Ask what the team already knows</h1>
-        <p className="lede">Every statement carries the review thread, ticket, decision or code it came from. Click a tag to read the original words.</p>
-        {read && <p className="small muted" style={{ marginTop: 6 }}>Read so far: {read}.</p>}
+        {turns.length === 0 && <p className="lede">Every statement carries the review thread, ticket, decision or code it came from. Click a tag to read the original words.</p>}
+        {turns.length === 0 && read && <p className="small muted" style={{ marginTop: 6 }}>Read so far: {read}.</p>}
       </div>
       <form className="ask-box" onSubmit={(e) => { e.preventDefault(); submit() }}>
         <label className="sr" htmlFor="q">Your question</label>
