@@ -196,3 +196,51 @@ def memory_timeline(fact_id: int, conn: psycopg.Connection = Depends(get_conn), 
     if out is None:
         raise HTTPException(404, "guidance not found")
     return out
+
+
+@router.get("/prs")
+def prs(limit: int = Query(default=60, ge=1, le=200), conn: psycopg.Connection = Depends(get_conn),
+        org: int = Depends(get_org_id)):
+    from . import views
+    return views.pr_list(conn, org, limit)
+
+
+@router.post("/prs/{repo}/{number}/review", dependencies=[Depends(require_write)])
+def review_pr(repo: str, number: int, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
+              provider: Provider = Depends(get_provider)):
+    """Draft review comments for a PR. Returned to the caller only: nothing is written to GitHub or any external service."""
+    from ..review.reviewer import draft_review
+    try:
+        out = draft_review(conn, org, provider, repo, number)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc))
+    conn.commit()
+    return out
+
+
+@router.get("/sources")
+def sources(conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id)):
+    from . import views
+    return views.sources(conn, org)
+
+
+@router.get("/provenance/{record_id}")
+def provenance(record_id: int, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id)):
+    from . import views
+    out = views.provenance(conn, org, record_id)
+    if not out:
+        raise HTTPException(404, "record not found")
+    return out
+
+
+@router.get("/starters")
+def starters(conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id)):
+    from . import views
+    return views.starters(conn, org)
+
+
+@router.get("/tags")
+def tags(ids: str = Query(min_length=1, max_length=8000), conn: psycopg.Connection = Depends(get_conn),
+         org: int = Depends(get_org_id)):
+    from . import views
+    return views.tags(conn, org, [x for x in ids.split(",") if x])

@@ -33,6 +33,7 @@ def test_statements_without_a_valid_citation_are_dropped(conn, org):
     assert out["status"] == "answered" and len(out["answer"]) == 1
     assert out["citations"][0]["author"] == "priya.raman" and out["citations"][0]["url"]
     assert out["follow_ups"] == ["Which endpoints still use offset?"]
+    assert sorted(d["text"] for d in out["dropped"]) == ["An invented claim.", "An uncited claim."]   # visible on request
 
 
 def test_no_valid_statements_means_insufficient_not_a_guess(conn, org):

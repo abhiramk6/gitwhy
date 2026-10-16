@@ -81,14 +81,16 @@ def ask(conn: psycopg.Connection, org: int, provider: Provider, question: str,
     except LLMUnavailable as exc:
         return {"status": "llm_required", "question": question, "answer": [], "citations": [], "retrieval": smeta,
                 "note": str(exc)}
-    answer, used = [], []
+    answer, used, dropped = [], [], []
     for seg in res["answer"]:
         ids = [i for i in dict.fromkeys(seg.get("cites") or []) if i in cites]
         if not seg["text"].strip() or not ids:
+            if seg["text"].strip():
+                dropped.append({"text": seg["text"].strip(), "reason": "no source in the evidence supports this statement"})
             continue                       # no valid source => the statement is not shown
         answer.append({"text": seg["text"].strip(), "cites": ids})
         used += [i for i in ids if i not in used]
     status = "answered" if answer and res["sufficient"] else ("partial" if answer else "insufficient")
     return {"status": status, "question": question, "answer": answer,
-            "citations": [cites[i] for i in used], "follow_ups": res["follow_ups"][:3], "retrieval": smeta,
+            "citations": [cites[i] for i in used], "follow_ups": res["follow_ups"][:3], "dropped": dropped, "retrieval": smeta,
             "considered": len(cites)}
