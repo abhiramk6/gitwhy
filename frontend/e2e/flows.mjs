@@ -7,7 +7,13 @@ import os from 'os'
 const OUT = process.argv[2]; const BASE = process.argv[3] || 'http://127.0.0.1:8000'; const only = process.argv[4]
 const exe = process.env.PLAYWRIGHT_CHROMIUM || `${os.homedir()}/.cache/ms-playwright/chromium_headless_shell-1148/chrome-linux/headless_shell`
 const browser = await chromium.launch({ executablePath: exe, args: ['--no-sandbox'] })
-const page = await browser.newPage({ viewport: { width: 1360, height: 860 } })
+const ctx = await browser.newContext({ viewport: { width: 1360, height: 860 } })
+if (process.env.GITWHY_LOGIN) {  // "email:password" -> sign in through the API and start the browser already signed in (auth-required servers)
+  const [email, password] = process.env.GITWHY_LOGIN.split(':')
+  const r = await (await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password }) })).json()
+  await ctx.addInitScript(([t, o]) => { localStorage.setItem('gitwhy_session', t); localStorage.setItem('gitwhy_org', o) }, [r.token, process.env.GITWHY_ORG || 'northwind'])
+}
+const page = await ctx.newPage()
 const problems = []
 page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`) })
 page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`))

@@ -14,6 +14,10 @@ cd backend && .venv/bin/python -m app.seed         # migrate + ingest + graph + 
 .venv/bin/uvicorn app.main:app --port 8000         # UI + API + MCP at http://127.0.0.1:8000
 cd ../frontend && npm ci && npm run build          # (UI is served from frontend/dist)
 ```
+**Live deployment (this VM):** https://187-127-173-215.sslip.io (Caddy HTTPS + systemd `gitwhy`, code in /opt/gitwhy, secrets in /etc/gitwhy/app.env). Redeploy with `sudo ops/deploy_vm.sh` after `npm run build`.
+Test account for the sample organizations: `demo@gitwhy.test` / `gitwhy-demo-2026` (read-only, test data only). Anyone else signs up and goes through onboarding (organization, GitHub, Jira, live sync status).
+Accounts mode is switched on with `AUTH_REQUIRED=1`; without it the app serves the single `ORG_SLUG` with no login (local development).
+
 Rename the product in one place: `product.json` (name, slug, tagline) drives the UI brand and page title, API title, MCP server name and `/api/meta`.
 
 Tests: `cd backend && .venv/bin/python -m pytest -q` · Fixture check: `python3 scripts/validate_synthetic_org.py`
