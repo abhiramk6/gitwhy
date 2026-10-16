@@ -65,7 +65,10 @@ PLAN = {
         "report it as a risk of type 'stale_reference' saying which superseded decision it still follows and which "
         "decision replaced it; (9) review every reuse_candidates entry: when the request would add or extend "
         "functionality that an existing component already provides, or that two components duplicate, report it "
-        "under reuse and name the component to use. 'reuse' means existing code to reuse, never planned work."),
+        "under reuse and name the component to use. 'reuse' means existing code to reuse, never planned work; "
+        "(10) 'acceptance_criteria': for each task, one to three testable statements that say when it is done; where a "
+        "decision or earlier guidance governs the task, the criterion states that rule and cites it; 'task' is the id of the "
+        "task it belongs to."),
     "schema": {"type": "object", "properties": {
         "components": {"type": "array", "items": {"type": "object", "properties": {
             "service": {"type": "string"}, "needs_change": {"type": "string"}, "reason": {"type": "string"},
@@ -88,10 +91,59 @@ PLAN = {
         "tests": {"type": "array", "items": {"type": "object", "properties": {
             "service": {"type": "string"}, "check": {"type": "string"},
             "evidence": {"type": "array", "items": {"type": "string"}}}, "required": ["service", "check", "evidence"]}},
+        "acceptance_criteria": {"type": "array", "items": {"type": "object", "properties": {
+            "task": {"type": "string"}, "criterion": {"type": "string"},
+            "evidence": {"type": "array", "items": {"type": "string"}}}, "required": ["task", "criterion", "evidence"]}},
         "open_questions": {"type": "array", "items": {"type": "object", "properties": {
             "question": {"type": "string"}, "evidence": {"type": "array", "items": {"type": "string"}}},
             "required": ["question", "evidence"]}}},
-        "required": ["components", "decisions", "risks", "reuse", "tasks", "tests", "open_questions"]},
+        "required": ["components", "decisions", "risks", "reuse", "tasks", "tests", "acceptance_criteria", "open_questions"]},
+}
+
+SELECT_CHANGED = {
+    "system": (
+        "A developer asks what could break if they change something. From the catalog of services (repositories) and the "
+        "retrieved evidence, choose the service(s) the developer says they would CHANGE: the subject of the change. Do "
+        "NOT choose services that might be affected by the change; those are found separately from the dependency graph. "
+        "Use only catalog names and cite the evidence ids behind each choice. If the question names no service or "
+        "component you can match to the catalog, set insufficient_evidence=true and explain; do not guess."),
+    "schema": SELECT_SERVICES["schema"],
+}
+
+CHANGE_IMPACT = {
+    "system": (
+        "A developer asks what could break if they change something. You are given: the services in scope with the "
+        "dependency paths that connect them (callers that may break, and services the change relies on), candidate "
+        "decisions (ADRs with status), things reviewers said in earlier threads (team_guidance, with who and when), "
+        "ownership/risk facts, open tickets, and retrieved passages. Rules: (1) cite evidence ids for every claim and use "
+        "only ids from the packet; (2) 'affected': for each service that depends on the changed one, say what in "
+        "it could plausibly break and what to check, phrased as something to verify, never as a fact that behaviour "
+        "changes; use only the dependency and passages given, and omit a service you can say nothing specific about; "
+        "(3) 'rules': the decisions or reviewer statements the change must respect; give the id of the decision or "
+        "guidance item as 'evidence_id', copy the shortest exact sentence that carries the rule into 'quote', and say "
+        "why it matters for this change; a superseded decision is never a rule; omit candidates this change does not "
+        "touch; (4) 'risks': ownership concentration, blocking or open tickets, conflicts; (5) 'checks': concrete "
+        "things to verify before merging, each tied to evidence; (6) say nothing rather than guess: if the evidence "
+        "cannot link the question to the services, set insufficient_evidence=true; (7) 'headline': one sentence "
+        "(at most 25 words) that answers the question; 'key' inside it is the most important phrase (at most 8 words, "
+        "copied exactly from the headline)."),
+    "schema": {"type": "object", "properties": {
+        "headline": {"type": "string"}, "key": {"type": "string"},
+        "affected": {"type": "array", "items": {"type": "object", "properties": {
+            "service": {"type": "string"}, "what_could_break": {"type": "string"},
+            "evidence": {"type": "array", "items": {"type": "string"}}},
+            "required": ["service", "what_could_break", "evidence"]}},
+        "rules": {"type": "array", "items": {"type": "object", "properties": {
+            "evidence_id": {"type": "string"}, "why_it_matters": {"type": "string"}, "quote": {"type": "string"}},
+            "required": ["evidence_id", "why_it_matters", "quote"]}},
+        "risks": {"type": "array", "items": {"type": "object", "properties": {
+            "type": {"type": "string"}, "summary": {"type": "string"},
+            "evidence": {"type": "array", "items": {"type": "string"}}}, "required": ["type", "summary", "evidence"]}},
+        "checks": {"type": "array", "items": {"type": "object", "properties": {
+            "check": {"type": "string"}, "evidence": {"type": "array", "items": {"type": "string"}}},
+            "required": ["check", "evidence"]}},
+        "insufficient_evidence": {"type": "boolean"}},
+        "required": ["headline", "key", "affected", "rules", "risks", "checks", "insufficient_evidence"]},
 }
 
 DECISION_PAIRS = {
@@ -189,6 +241,11 @@ HANDOVER = {
         "'open_work': unfinished tickets or follow-ups they own; (5) 'people_to_ask': other people who touched the "
         "same areas, with what to ask them; (6) 'risks': what breaks or gets lost if nothing is done, concrete; "
         "(7) 'first_week': at most five concrete actions for the successor; (8) never invent names, files or numbers; "
+        "(8b) 'poorly_documented': areas where the packet shows 'documents_mentioning_file' is 0 AND the person wrote most of the "
+        "history, so the reasons behind the code may live only in their head; say 'no document or decision found that mentions it', never "
+        "that nothing exists; (8c) commit history shows who changed files, not who understands them: never call anyone the owner or the "
+        "expert on the strength of file history alone, say 'wrote N of M commits'; in 'people_to_ask' prefer people with "
+        "still_active=true and say they touched the area, to be confirmed with them; "
         "(9) say nothing rather than guess: empty lists are fine; (10) one or two plain sentences per item; (11) every "
         "item has 'key': the most important phrase (at most 8 words) copied exactly from that item's text."),
     "schema": {"type": "object", "properties": {"summary": {"type": "string"},
@@ -196,8 +253,8 @@ HANDOVER = {
             "text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}},
             "key": {"type": "string"}},
             "required": ["text", "cites", "key"]}} for k in
-           ("only_they_know", "standards_they_set", "open_work", "people_to_ask", "risks", "first_week")}},
-        "required": ["summary", "only_they_know", "standards_they_set", "open_work", "people_to_ask", "risks",
+           ("only_they_know", "poorly_documented", "standards_they_set", "open_work", "people_to_ask", "risks", "first_week")}},
+        "required": ["summary", "only_they_know", "poorly_documented", "standards_they_set", "open_work", "people_to_ask", "risks",
                      "first_week"]},
 }
 

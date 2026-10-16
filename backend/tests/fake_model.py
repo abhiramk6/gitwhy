@@ -76,12 +76,14 @@ def plan(p):
              for i, c in enumerate(comps)]
     return {"components": comps, "decisions": decisions, "risks": risks, "reuse": reuse, "tasks": tasks,
             "tests": [{"service": c["service"], "check": f"test {c['service']}", "evidence": c["evidence"]} for c in comps],
+            "acceptance_criteria": [{"task": t["id"], "criterion": f"{t['service']} passes its checks", "evidence": t["evidence"]}
+                                    for t in tasks] + [{"task": "T99", "criterion": "orphan", "evidence": []}],
             "open_questions": [{"question": "Confirm acceptance criteria.", "evidence": []}]}
 
 
 def ideal_provider(choose=None, semantic=False, **overrides) -> ScriptedProvider:
     r = {"query_analysis": query_analysis, "rerank": rerank, "decision_pairs": decision_pairs,
-         "pr_compliance": pr_compliance, "reuse_pairs": reuse_pairs, "review_guidance": lambda p: {"guidance": []}, "select_services": make_select(choose),
+         "pr_compliance": pr_compliance, "reuse_pairs": reuse_pairs, "review_guidance": lambda p: {"guidance": []}, "select_services": make_select(choose), "select_changed": make_select(choose),
          "plan": plan}
     r.update(overrides)
     return ScriptedProvider(r, semantic=semantic)

@@ -102,3 +102,18 @@ def test_model_saying_insufficient_evidence_is_honoured(conn, org):
 def test_persisted_plan(conn, org, P):
     create_plan(conn, org, P, REQ)
     assert conn.execute("SELECT count(*) n FROM feature_plans").fetchone()["n"] == 1
+
+
+def test_acceptance_criteria_belong_to_real_tasks_and_are_proposals(conn):
+    from pathlib import Path
+    from app.ingestion.fixtures import ingest
+    from app.knowledge.build_graph import build
+    from app.planning.planner import create_plan, unsupported_claims
+    from tests.fake_model import ideal_provider
+    P = ideal_provider(choose=lambda p: ["payments-api"])
+    org_id, _ = ingest(conn, Path(__file__).resolve().parents[2] / "fixtures" / "northwind")
+    build(conn, org_id, P)
+    plan = create_plan(conn, org_id, P, "Add partial refunds to payments-api", persist=False)
+    ids = {t["id"] for t in plan["tasks"]}
+    assert plan["acceptance_criteria"] and all(a["task"] in ids and a["label"] == "proposed" for a in plan["acceptance_criteria"])
+    assert any("unknown task 'T99'" in d for d in plan["dropped_claims"]) and unsupported_claims(plan) == []

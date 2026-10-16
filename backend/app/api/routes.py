@@ -42,6 +42,10 @@ class TimedTaskBody(BaseModel):
     found: bool
 
 
+class ImpactBody(BaseModel):
+    question: str = Field(min_length=5, max_length=500)
+
+
 class RememberBody(BaseModel):
     text: str = Field(min_length=3, max_length=2000)
     author: str = Field(min_length=1, max_length=80)
@@ -160,6 +164,19 @@ def ask(body: AskBody, conn: psycopg.Connection = Depends(get_conn), org: int = 
     t0 = time.perf_counter()
     out = run_ask(conn, org, provider, body.question, [t.model_dump() for t in body.history])
     out["event_id"] = metrics.record(conn, org, uid, "ask", int((time.perf_counter() - t0) * 1000), metrics.ask_detail(out))
+    conn.commit()
+    return out
+
+
+@router.post("/impact", dependencies=[Depends(require_write)])
+def change_impact(body: ImpactBody, conn: psycopg.Connection = Depends(get_conn), org: int = Depends(get_org_id),
+                  provider: Provider = Depends(get_provider), uid: int | None = Depends(optional_user_id)):
+    """What else could break if this changes, and which earlier decisions apply. Read-only."""
+    from ..impact.change_impact import change_impact as run
+    from ..metrics import metrics
+    t0 = time.perf_counter()
+    out = run(conn, org, provider, body.question)
+    metrics.record(conn, org, uid, "impact", int((time.perf_counter() - t0) * 1000), {"status": out.get("status")})
     conn.commit()
     return out
 

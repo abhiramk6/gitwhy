@@ -16,7 +16,7 @@ function PlanView({ plan }) {
   const reg = plan.evidence || {}
   if (plan.status === 'insufficient_evidence') return <p className="notice">No source backs a plan for this, so we're not making one up. {plan.open_questions.map((q) => q.summary || q).join(' ')}</p>
   if (plan.status === 'llm_required') return <p className="notice err">The write-up is down; search still works. Try again shortly.</p>
-  const md = [`# Plan: ${plan.request}`, '## Tasks', ...plan.tasks.map((t) => `- ${t.id} ${t.title}${t.service ? ` (${t.service})` : ''}`), '## Tests', ...plan.tests.map((t) => `- ${t.check}`)].join('\n')
+  const md = [`# Plan: ${plan.request}`, '## Tasks', ...plan.tasks.map((t) => `- ${t.id} ${t.title}${t.service ? ` (${t.service})` : ''}`), '## Done when', ...(plan.acceptance_criteria || []).map((a) => `- ${a.task}: ${a.criterion}`), '## Tests', ...plan.tests.map((t) => `- ${t.check}`)].join('\n')
   return (
     <div className="stack">
       {(plan.dropped_claims || []).length > 0 && <details className="disc small muted"><summary>{plan.dropped_claims.length} claim(s) left out: no source backs them up</summary><ul>{plan.dropped_claims.map((d, i) => <li key={i}>{d}</li>)}</ul></details>}
@@ -30,7 +30,8 @@ function PlanView({ plan }) {
         {plan.risks.length + plan.reuse_candidates.length === 0 && <p className="muted">None found.</p>}</section>
       <section className="sect"><h2>Do this, in order</h2>
         <ol className="tasks">{plan.tasks.map((t) => <li key={t.id}><div><div className="tt">{t.title}</div>
-          <div className="small muted">{t.service ? `${t.service}. ` : ''}{t.depends_on.length ? `After ${t.depends_on.join(', ')}. ` : ''}{t.rationale} <Tags ids={t.evidence} registry={reg} /></div></div></li>)}</ol></section>
+          <div className="small muted">{t.service ? `${t.service}. ` : ''}{t.depends_on.length ? `After ${t.depends_on.join(', ')}. ` : ''}{t.rationale} <Tags ids={t.evidence} registry={reg} /></div>
+          {(plan.acceptance_criteria || []).filter((a) => a.task === t.id).map((a, i) => <div key={i} className="small" style={{ marginTop: 6 }}><span className="muted">Done when</span> {a.criterion} <Tags ids={a.evidence} registry={reg} /></div>)}</div></li>)}</ol></section>
       <details className="evidence"><summary>Tests and open questions</summary>
         {plan.tests.map((t, i) => <p key={i} style={{ margin: '0 0 8px' }}>{t.check}</p>)}
         {plan.open_questions.map((q, i) => <Line key={i} label={q.label} ids={q.evidence} reg={reg}>{q.summary}</Line>)}</details>

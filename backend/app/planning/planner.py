@@ -267,6 +267,13 @@ def create_plan(conn: psycopg.Connection, org_id: int, provider: Provider, reque
                           "rationale": t.get("rationale", "")})
     tests = [{"service": x["service"] if x.get("service") in affected else None, "check": x["check"],
               "label": "proposed", "evidence": _valid(x.get("evidence"), ev)} for x in raw.get("tests", [])]
+    criteria = []
+    for a in raw.get("acceptance_criteria", []):
+        ids = _valid(a.get("evidence"), ev)
+        if a.get("task") not in task_ids or not (a.get("criterion") or "").strip():
+            dropped.append(f"acceptance criterion for unknown task {a.get('task')!r}")
+            continue
+        criteria.append({"task": a["task"], "criterion": a["criterion"].strip(), "label": "proposed", "evidence": ids})
     questions = [{"type": "question", "summary": q["question"], "label": "proposed",
                   "evidence": _valid(q.get("evidence"), ev)} for q in raw.get("open_questions", [])]
     for c in cand_conflicts.values():  # an active conflict touching the scope is never silently dropped
@@ -282,6 +289,7 @@ def create_plan(conn: psycopg.Connection, org_id: int, provider: Provider, reque
         "request": request, "status": "draft", "provider": provider.name, "search_mode": meta["mode"],
         "assumptions": assumptions, "affected_components": out_components, "decisions": decisions, "risks": risks,
         "reuse_candidates": reuse, "open_questions": questions, "tasks": tasks_out, "tests": tests,
+        "acceptance_criteria": criteria,
         "related_work": related, "evidence": ev.items, "dropped_claims": dropped,
     }
     if persist:
@@ -294,7 +302,7 @@ def unsupported_claims(plan: dict) -> list[str]:
     """Claims whose evidence ids are missing from the registry, or non-proposed claims without evidence."""
     bad = []
     reg = plan.get("evidence", {})
-    for section in ("affected_components", "decisions", "risks", "reuse_candidates", "tasks", "open_questions"):
+    for section in ("affected_components", "decisions", "risks", "reuse_candidates", "tasks", "open_questions", "acceptance_criteria"):
         for item in plan.get(section, []):
             ids = item.get("evidence", [])
             if any(i not in reg for i in ids):

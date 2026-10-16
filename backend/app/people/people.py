@@ -59,6 +59,37 @@ def roster(conn: psycopg.Connection, org: int) -> list[dict]:
                   key=lambda x: -(x["commits"] + x["prs"] + 3 * x["comments"] + 5 * x["guidance"]))
 
 
+ACTIVE_DAYS = 120
+
+
+def _days_between(a: str, b: str) -> int:
+    from datetime import date
+    try:
+        return (date.fromisoformat(b[:10]) - date.fromisoformat(a[:10])).days
+    except ValueError:
+        return 10_000
+
+
+def _docs_mentioning(conn, org: int, path: str) -> int:
+    """How many docs/ADRs/runbooks name this file (by path or file name). A plain text count: zero means nothing was found, not that
+    nothing exists."""
+    name = path.rsplit("/", 1)[-1]
+    return conn.execute("SELECT count(*) AS n FROM source_records WHERE organization_id=%s AND source_type IN ('doc','adr') "
+                        "AND (position(%s in body) > 0 OR position(%s in body) > 0)", (org, path, name)).fetchone()["n"]
+
+
+def _components(per_file, login: str) -> list[dict]:
+    """Per repository: how many files the person touched and their share of all file-touches there. Counts, not expertise."""
+    out: dict[str, dict] = {}
+    for (repo, _f), cnt in per_file.items():
+        c = out.setdefault(repo, {"repo": repo, "files": 0, "their_touches": 0, "all_touches": 0})
+        c["all_touches"] += sum(cnt.values())
+        if cnt.get(login):
+            c["files"] += 1
+            c["their_touches"] += cnt[login]
+    return sorted((c for c in out.values() if c["files"]), key=lambda c: -c["their_touches"])
+
+
 def profile(conn: psycopg.Connection, org: int, login: str, areas_n: int = 12) -> dict | None:
     """Deterministic packet for one person, including the evidence registry the brief may cite."""
     commits = _commits(conn, org)
@@ -77,14 +108,25 @@ def profile(conn: psycopg.Connection, org: int, login: str, areas_n: int = 12) -
         areas.append({"repo": repo, "file": f, "commits": n, "total": tot, "share": round(n / tot, 3),
                       "others": [{"login": a, "commits": k} for a, k in others[:3]]})
     areas.sort(key=lambda a: (-a["share"] * a["commits"], a["repo"], a["file"]))
+    last_by = defaultdict(str)
+    for c in commits:
+        if c.get("author"):
+            last_by[c["author"]] = max(last_by[c["author"]], c.get("date") or "")
+    components = _components(per_file, login)
     areas = areas[:areas_n]
+    for a in areas:  # who else could be asked: touched the same file AND still active (touching a file is not proof of expertise)
+        for o in a["others"]:
+            o["last_active"] = last_by.get(o["login"]) or None
+            o["still_active"] = bool(o["last_active"]) and _days_between(o["last_active"], ref) <= ACTIVE_DAYS
+        a["docs_mentioning"] = _docs_mentioning(conn, org, a["file"])
     for a in areas:
         eid = f"area:{a['repo']}/{a['file']}"
         a["id"] = eid
         who = ", ".join(f"{o['login']} ({o['commits']})" for o in a["others"]) or "nobody else"
         ev[eid] = {"id": eid, "kind": "statistic", "evidence_type": "structural", "status": "active",
                    "label": f"{login} made {a['commits']} of {a['total']} commits to {a['repo']}/{a['file']} "
-                            f"({a['share']:.0%}); others: {who}", "url": None}
+                            f"({a['share']:.0%}); others: {who}; documents/decisions mentioning the file: {a['docs_mentioning']}",
+                   "url": None}
     prs, comments, tickets = [], [], []
     for r in conn.execute("SELECT id, source_type, source_id, title, source_url, payload FROM source_records WHERE "
                           "organization_id=%s AND source_type IN ('github_pr','github_comment','jira_issue') "
@@ -132,7 +174,7 @@ def profile(conn: psycopg.Connection, org: int, login: str, areas_n: int = 12) -
     people = {r["login"]: r for r in roster(conn, org)}
     row = people.get(login, {})
     return {"login": login, "commits": row.get("commits", 0), "last_active": last or None, "reference_date": ref,
-            "areas": areas, "pull_requests": prs, "comments": comments, "tickets": tickets, "facts": facts,
+            "areas": areas, "components": components, "pull_requests": prs, "comments": comments, "tickets": tickets, "facts": facts,
             "evidence": ev}
 
 
@@ -144,8 +186,10 @@ def handover(conn: psycopg.Connection, org: int, provider: Provider, login: str)
         return {"status": "llm_required", "login": login, "profile": prof,
                 "note": "The brief needs a model; the profile above is computed without one."}
     packet = {"person": login, "last_active": prof["last_active"], "reference_date": prof["reference_date"],
+              "components": prof["components"],
               "areas": [{"id": a["id"], "repo": a["repo"], "file": a["file"], "commits": a["commits"],
-                         "of_total": a["total"], "others": a["others"]} for a in prof["areas"]],
+                         "of_total": a["total"], "documents_mentioning_file": a["docs_mentioning"], "others": a["others"]}
+                        for a in prof["areas"]],
               "pull_requests": [{k: v for k, v in p.items() if k != "url"} for p in prof["pull_requests"]],
               "comments": [{k: v for k, v in c.items() if k != "url"} for c in prof["comments"]],
               "tickets": [{k: v for k, v in t.items() if k != "url"} for t in prof["tickets"]],
@@ -156,9 +200,9 @@ def handover(conn: psycopg.Connection, org: int, provider: Provider, login: str)
         return {"status": "llm_required", "login": login, "profile": prof, "note": str(exc)}
     ev = prof["evidence"]
     sections = {}
-    for k in ("only_they_know", "standards_they_set", "open_work", "people_to_ask", "risks", "first_week"):
+    for k in ("only_they_know", "poorly_documented", "standards_they_set", "open_work", "people_to_ask", "risks", "first_week"):
         items = []
-        for it in res[k]:
+        for it in res.get(k, []):
             ids = [i for i in dict.fromkeys(it.get("cites") or []) if i in ev]
             if it["text"].strip() and ids:
                 items.append({"text": it["text"].strip(), "cites": ids, "key": highlight(it.get("key", ""), it["text"])})

@@ -9,6 +9,7 @@ import People from './pages/People.jsx'
 import Plan from './pages/Plan.jsx'
 import Trace from './pages/Trace.jsx'
 import Sources from './pages/Sources.jsx'
+import Impact from './pages/Impact.jsx'
 import Results from './pages/Results.jsx'
 import GraphPage from './pages/Graph.jsx'
 import Welcome from './pages/Welcome.jsx'
@@ -16,9 +17,9 @@ import Onboarding from './pages/Onboarding.jsx'
 
 const NAV = [
   ['ask', 'Ask', Ask], ['review', 'Review', Review], ['memory', 'Memory', Memory], ['people', 'People', People],
-  ['plan', 'Plan', Plan], ['trace', 'Trace', Trace], ['sources', 'Sources', Sources], ['results', 'Results', Results], ['map', 'Map', GraphPage],
+  ['plan', 'Plan', Plan], ['impact', 'Impact', Impact], ['trace', 'Trace', Trace], ['sources', 'Sources', Sources], ['results', 'Results', Results], ['map', 'Map', GraphPage],
 ]
-const NAV_SHOWN = ['ask', 'review', 'memory', 'people', 'plan', 'trace', 'sources', 'results']
+const NAV_SHOWN = ['ask', 'review', 'memory', 'people', 'plan', 'impact', 'trace', 'sources', 'results']
 
 function Shell({ me, onSwitch, onSignOut }) {
   const { page, q } = useRoute()

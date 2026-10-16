@@ -45,6 +45,7 @@ export const api = {
   ingestion: () => request('/api/ingestion'),
   starters: () => request('/api/starters'),
   ask: (question, history) => request('/api/ask', { method: 'POST', body: JSON.stringify({ question, history }) }),
+  impact: (question) => request('/api/impact', { method: 'POST', body: JSON.stringify({ question }) }),
   feedback: (b) => request('/api/feedback', { method: 'POST', body: JSON.stringify(b) }),
   timedTask: (b) => request('/api/timed-tasks', { method: 'POST', body: JSON.stringify(b) }),
   results: (assume) => request('/api/results' + (assume ? `?assumed_minutes=${encodeURIComponent(assume)}` : '')),

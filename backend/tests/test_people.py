@@ -43,3 +43,24 @@ def test_handover_items_need_cites_that_exist_in_the_packet(conn, org):
 def test_handover_without_a_model_still_returns_the_computed_profile(conn, org):
     out = handover(conn, org, OfflineProvider(), "dana.okafor")
     assert out["status"] == "llm_required" and out["profile"]["areas"]
+
+
+def test_departure_facts_are_counts_with_their_limits_stated(conn, org):
+    p = profile(conn, org, "dana.okafor")
+    comp = {c["repo"]: c for c in p["components"]}
+    assert comp["ledger-core"]["files"] >= 1 and comp["ledger-core"]["their_touches"] <= comp["ledger-core"]["all_touches"]
+    top = p["areas"][0]
+    assert isinstance(top["docs_mentioning"], int) and "documents/decisions mentioning the file" in p["evidence"][top["id"]]["label"]
+    others = [o for a in p["areas"] for o in a["others"]]
+    assert all("still_active" in o for o in others)
+
+
+def test_poorly_documented_items_follow_the_same_cite_rule(conn, org):
+    def responder(pk):
+        a = pk["areas"][0]
+        assert "documents_mentioning_file" in a and pk["components"]
+        return {"summary": "s", "only_they_know": [], "poorly_documented": [{"text": "No document found.", "cites": [a["id"]], "key": "No document"},
+                                                                          {"text": "Invented.", "cites": ["area:x"], "key": ""}],
+                "standards_they_set": [], "open_work": [], "people_to_ask": [], "risks": [], "first_week": []}
+    out = handover(conn, org, ideal_provider(handover=responder), "dana.okafor")
+    assert [i["text"] for i in out["poorly_documented"]] == ["No document found."]
