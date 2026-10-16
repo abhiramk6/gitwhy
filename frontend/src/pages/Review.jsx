@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
-import { Problem, Reading, Strata, Tags, ago, copyText, shortName, useColumn } from '../ui.jsx'
+import { Hl, Problem, Reading, Strata, Tags, ago, copyText, shortName, useColumn } from '../ui.jsx'
 import { useAsync } from '../components.jsx'
 
 const KIND = {
@@ -32,7 +32,7 @@ function Draft({ r }) {
                   <button className="btn quiet small" onClick={() => setOff({ ...off, [i]: !off[i] })}>{off[i] ? 'Keep' : 'Discard'}</button>
                 </span>
               </div>
-              <p style={{ margin: '6px 0' }}>{c.comment}</p>
+              <p style={{ margin: '6px 0', fontSize: 16.5, maxWidth: '60ch' }}><Hl text={c.comment} k={c.key} /></p>
               {c.quote && <blockquote className="q-s" onClick={() => col.open({ id: c.evidence[0], quote: c.quote, label: reg[c.evidence[0]]?.label })} style={{ cursor: 'pointer' }}>{c.quote}</blockquote>}
               <div><Tags ids={c.evidence} registry={reg} quote={c.quote} land={i + 1} /></div>
             </div>

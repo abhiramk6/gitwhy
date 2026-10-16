@@ -18,8 +18,8 @@ const run = async (name, fn) => { if (only && only !== name) return; try { await
 await run('ask', async () => {
   await page.goto(BASE + '/#/ask'); await page.waitForSelector('.chip'); await shot('01-ask-start')
   await page.click('.chip:has-text("cursor pagination")')
-  await page.waitForSelector('.answer .tag', { timeout: 120000 }); await page.waitForTimeout(900)
-  await page.click('.answer .tag >> nth=0'); await page.waitForSelector('.col .words'); await shot('02-ask-answer-with-source')
+  await page.waitForSelector('.headline', { timeout: 120000 }); await page.waitForTimeout(1200); await shot('02-ask-answer')
+  await page.click('.pcard >> nth=0'); await page.waitForSelector('.col .words'); await shot('02b-ask-source-open')
 })
 await run('review', async () => {
   await page.goto(BASE + '/#/review'); await page.waitForSelector('.list li button')
@@ -29,19 +29,19 @@ await run('review', async () => {
 })
 await run('memory', async () => {
   await page.goto(BASE + '/#/memory'); await page.waitForSelector('.list li button')
-  await page.click('.list li button:has-text("Cursor pagination")'); await page.click('button:has-text("Trace what happened")')
-  await page.waitForSelector('.verdict', { timeout: 120000 }); await shot('04-memory-timeline')
+  await page.click('.list li button:has-text("Cursor pagination")')
+  await page.waitForSelector('.story .pill', { timeout: 120000 }); await shot('04-memory-story')
 })
 await run('people', async () => {
   await page.goto(BASE + '/#/people'); await page.waitForSelector('.list li button')
-  await page.click('.list li button:has-text("Dana")'); await page.click('button:has-text("Prepare handover")')
-  await page.waitForSelector('.answer, .sect .tag', { timeout: 120000 }); await shot('05-people-handover')
+  await page.click('.list li button:has-text("Dana")')
+  await page.waitForSelector('.headline', { timeout: 120000 }); await shot('05-people-handover')
 })
 await run('plan', async () => {
   await page.goto(BASE + '/#/plan'); await page.click('button:has-text("Plan it")'); await page.waitForSelector('.turn .tag', { timeout: 180000 }); await shot('06-plan')
 })
 await run('trace', async () => {
-  await page.goto(BASE + '/#/trace?f=' + encodeURIComponent('notify-svc:notify/dedupe.py')); await page.waitForSelector('.core li'); await shot('07-trace')
+  await page.goto(BASE + '/#/trace?f=' + encodeURIComponent('notify-svc:notify/dedupe.py')); await page.waitForSelector('.headline', { timeout: 120000 }); await shot('07-trace')
 })
 await run('sources', async () => { await page.goto(BASE + '/#/sources'); await page.waitForSelector('.tbl'); await shot('08-sources') })
 console.log(problems.length ? 'PROBLEMS:\n' + problems.join('\n') : 'no problems')

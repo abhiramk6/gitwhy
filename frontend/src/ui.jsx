@@ -192,6 +192,38 @@ export function Column({ go }) {
   )
 }
 
+/* ---------- highlighted key phrase ---------- */
+export function Hl({ text, k }) {
+  const t = text || ''
+  const i = k ? t.toLowerCase().indexOf(k.toLowerCase()) : -1
+  if (i < 0) return <>{t}</>
+  return <>{t.slice(0, i)}<mark className="key">{t.slice(i, i + k.length)}</mark>{t.slice(i + k.length)}</>
+}
+
+/* ---------- proof: the exact words, with who said them and when ---------- */
+export function Proof({ items }) {
+  const col = useColumn()
+  const meta = useTagMeta((items || []).map((p) => p.id))
+  const [all, setAll] = useState(false)
+  const shown = all ? items : (items || []).slice(0, 3)
+  if (!items?.length) return null
+  return (
+    <div className="proof" aria-label="Proof">
+      {shown.map((p, i) => {
+        const m = meta(p.id); const t = typeOf(m?.type)
+        return (
+          <button key={p.id} type="button" className="pcard" style={{ '--tc': t.color, animationDelay: `${i * 90}ms` }}
+            onClick={() => col.open({ id: p.id, quote: p.quote, label: m?.title })}>
+            <span className="pmeta"><span style={{ color: t.color }}>{t.glyph}</span> <b>{shortName(m?.who) || t.label}</b> <span className="d">{ago(m?.when)}</span> <span className="small muted">{t.label}</span></span>
+            <span className="words pq">“{p.quote}”</span>
+          </button>
+        )
+      })}
+      {!all && items.length > 3 && <button type="button" className="btn quiet small" onClick={() => setAll(true)}>{items.length - 3} more proofs</button>}
+    </div>
+  )
+}
+
 /* ---------- small shared bits ---------- */
 export function Reading({ children }) { return <p className="reading" role="status"><b />{children}</p> }
 export function Problem({ error }) {

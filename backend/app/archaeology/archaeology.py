@@ -109,7 +109,7 @@ def trail(conn: psycopg.Connection, org: int, repo: str, path: str) -> dict | No
 def explain(conn: psycopg.Connection, org: int, provider, repo: str, path: str) -> dict | None:
     """A model-written account of why the file looks the way it does, over its own trail. Every point must cite trail items."""
     from ..intelligence import tasks as T
-    from ..intelligence.guards import exact
+    from ..intelligence.guards import exact, highlight
     from ..intelligence.judge import run_task
     from ..models.provider import LLMUnavailable
 
@@ -131,7 +131,7 @@ def explain(conn: psycopg.Connection, org: int, provider, repo: str, path: str) 
     def clean(seg):
         ids = [i for i in dict.fromkeys(seg.get("cites") or []) if i in items]
         text = (seg.get("text") or "").strip()
-        return {"text": text, "cites": ids, "key": exact(seg.get("key", ""), text, max_words=10)} if text and ids else None
+        return {"text": text, "cites": ids, "key": highlight(seg.get("key", ""), text)} if text and ids else None
 
     head = clean(res.get("headline") or {})
     points = [p for p in (clean(x) for x in res.get("points", [])) if p]

@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
-import { Problem, Reading, Strata, Tags, copyText, spanLine, useTagMeta } from '../ui.jsx'
+import { Hl, Problem, Proof, Reading, Strata, Tags, copyText, spanLine, useTagMeta } from '../ui.jsx'
 import { useAsync } from '../components.jsx'
 
 function Answer({ res }) {
   const ids = (res.citations || []).map((c) => c.id)
   const meta = useTagMeta(ids)
   const reg = Object.fromEntries((res.citations || []).map((c) => [c.id, { label: c.title, status: c.status }]))
-  const md = [...res.answer.map((a) => `${a.text} ${a.cites.map((c) => `[${(reg[c]?.label || c)}]`).join('')}`),
+  const md = [res.headline ? `**${res.headline.text}**` : '', ...res.answer.map((a) => `${a.text} ${a.cites.map((c) => `[${(reg[c]?.label || c)}]`).join('')}`),
     '', ...(res.citations || []).map((c) => `- ${c.title}${c.url ? ` (${c.url})` : ''}`)].join('\n')
   return (
     <div className="turn">
@@ -16,8 +16,10 @@ function Answer({ res }) {
         {res.status === 'insufficient' && <p className="notice">There is not enough evidence to answer this. {res.note || 'Nothing in the sources states it, so nothing is guessed.'}</p>}
         {res.status === 'llm_required' && <p className="notice err">Asking needs a language model and none is available. Search over the sources still works. {res.note}</p>}
         {res.status === 'partial' && <p className="notice">Part of the answer is supported by the sources. The rest is left out, not guessed.</p>}
+        {res.headline && <p className="headline"><Hl text={res.headline.text} k={res.headline.key} /></p>}
+        <Proof items={res.proof} />
         <div className="answer">
-          {res.answer.map((a, i) => <p key={i}>{a.text} <Tags ids={a.cites} registry={reg} land={i + 1} /></p>)}
+          {res.answer.map((a, i) => <p key={i}><Hl text={a.text} k={a.key} /> <Tags ids={a.cites} registry={reg} land={i + 1} /></p>)}
         </div>
         {res.answer.length > 0 && <p className="span-line">{spanLine(ids, meta)}. Considered {res.considered} candidates.</p>}
         {res.dropped?.length > 0 && (

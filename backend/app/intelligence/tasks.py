@@ -163,7 +163,7 @@ ASK = {
         "engineer needs first, with its citations; (9) every statement and the headline carry 'key': the single most "
         "important phrase (at most 8 words) copied exactly from that statement's own text; (10) 'proof': words copied "
         "exactly from one cited evidence item (its text or original_words, at most 35 words) that prove the statement; "
-        "empty string if no exact words fit. Earlier turns, when given, are context only and are not evidence."),
+        "empty string if no exact words fit; (11) statements after the headline add detail, they never repeat it. Earlier turns, when given, are context only and are not evidence."),
     "schema": {"type": "object", "properties": {
         "sufficient": {"type": "boolean"},
         "headline": {"type": "object", "properties": {

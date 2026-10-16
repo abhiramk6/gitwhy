@@ -263,3 +263,13 @@ def test_review_guidance_keeps_only_quoted_candidates_and_scopes(conn):
         {**good, "scope": "galaxy"}]}})
     out = review_guidance(conn, org, prov, comments, batch=8)
     assert [g["id"] for g in out] == [comments[0]["id"]] and out[0]["comment"]["author"] == "a"
+
+
+def test_highlight_is_always_a_literal_stretch_of_the_text():
+    from app.intelligence.guards import highlight
+    t = "Priya Raman established that new list endpoints must use cursor pagination to avoid bugs."
+    assert highlight("must use cursor pagination", t) == "must use cursor pagination"
+    assert highlight("New list endpoints should use opaque cursors", t) == "new list endpoints"   # copied from a source: overlap
+    assert highlight("nothing in common here", t) == "" and highlight("", t) == ""
+    assert highlight("Priya", t) == "Priya"                                                        # a literal word is fine
+    assert highlight("Priya banana", t) == ""                                                      # one shared word in a fallback is not

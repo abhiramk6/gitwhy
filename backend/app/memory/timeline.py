@@ -11,7 +11,7 @@ import re
 import psycopg
 
 from ..intelligence import tasks as T
-from ..intelligence.guards import exact
+from ..intelligence.guards import exact, highlight
 from ..intelligence.judge import run_task
 from ..models.provider import LLMUnavailable, Provider
 from ..retrieval.search import search_with_meta
@@ -108,6 +108,6 @@ def timeline(conn: psycopg.Connection, org: int, provider: Provider, fact_id: in
         text = (st.get("text") or "").strip()
         if text and sids:
             story.append({"text": text, "cites": [src["id"] if i == "origin" else i for i in sids],
-                          "key": exact(st.get("key", ""), text, max_words=10)})
+                          "key": highlight(st.get("key", ""), text)})
     return {"status": "ok", "guidance": head, "events": events, "story": story,
             "verdict": {"status": status, "reason": res["status_reason"], "cites": ids}}

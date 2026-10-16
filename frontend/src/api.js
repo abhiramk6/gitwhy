@@ -34,6 +34,7 @@ export const api = {
   person: (login) => request(`/api/people/${encodeURIComponent(login)}`),
   handover: (login) => request(`/api/people/${encodeURIComponent(login)}/handover`, { method: 'POST' }),
   files: () => request('/api/files'),
+  explainTrace: (repo, path) => request(`/api/archaeology/explain?repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`, { method: 'POST' }),
   trace: (repo, path) => request(`/api/archaeology?repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`),
   graph: () => request('/api/graph'),
   entity: (id) => request(`/api/entities/${id}`),

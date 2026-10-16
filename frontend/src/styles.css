@@ -143,3 +143,18 @@ blockquote.q-s { margin: 8px 0; padding: 2px 0 2px 14px; border-left: 3px solid 
 .cm .typ { font: 600 13.5px var(--display); }
 .tabs { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; } .tabs button { background: none; border: 0; padding: 7px 14px; cursor: pointer; } .tabs button.on { background: var(--ink); color: var(--paper); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* highlights: what matters most is marked, the rest stays quiet */
+mark.key { background: linear-gradient(transparent 52%, color-mix(in srgb, var(--inferred) 38%, transparent) 52%); color: inherit; font-weight: 600; padding: 0 1px; }
+.headline { font: 600 24px/1.28 var(--display); letter-spacing: -.01em; margin: 0 0 14px; max-width: 28em; }
+.headline .tag { font-family: var(--ui); vertical-align: middle; }
+.proof { display: grid; gap: 8px; margin: 0 0 16px; }
+.pcard { display: block; text-align: left; background: var(--paper); border: 1px solid var(--rule); border-left: 4px solid var(--tc, var(--slate)); border-radius: 4px; padding: 10px 14px 11px; cursor: pointer; animation: land .4s ease-out both; }
+.pcard:hover { background: var(--wash); }
+.pcard .pmeta { display: block; font-size: 13px; margin-bottom: 4px; } .pcard .d { color: var(--slate); font-variant-numeric: tabular-nums; margin-left: 4px; }
+.pcard .pq { font-size: 16px; line-height: 1.5; display: block; }
+.story p { font-size: 17px; line-height: 1.55; margin: 0 0 10px; max-width: 62ch; }
+.pill { display: inline-block; font: 600 13px var(--display); padding: 3px 11px; border-radius: 12px; color: var(--paper); background: var(--verified); }
+.pill.contradicted, .pill.replaced { background: var(--madder); } .pill.unclear { background: var(--inferred); }
+details.evidence { border-top: 1px solid var(--rule); margin-top: 22px; padding-top: 12px; } details.evidence > summary { cursor: pointer; font-weight: 600; color: var(--slate); }
+details.evidence[open] > summary { margin-bottom: 14px; }

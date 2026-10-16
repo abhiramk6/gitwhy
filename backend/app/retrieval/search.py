@@ -114,7 +114,7 @@ def _hydrate(conn, org, keys: list[tuple[str, int]], spans: dict, headline_q: st
             (headline_q, rec_ids)):
         span = spans.get(("record", r["id"]))
         body = r["body"] or ""
-        passage = body[span[0]:span[1]] if span and span[1] else (r["head"] or body)
+        passage = body[span[0]:span[1]] if span and span[1] else re.sub(r"</?b>", "", r["head"] or body)
         out[("record", r["id"])] = Hit("record", r["id"], r["title"] or r["source_id"], passage.strip(),
                                        r["source_type"], r["source_id"], r["source_url"], repo=r["repo"],
                                        status=r["decision_status"])

@@ -10,7 +10,7 @@ from collections import Counter, defaultdict
 import psycopg
 
 from ..intelligence import tasks as T
-from ..intelligence.guards import exact
+from ..intelligence.guards import exact, highlight
 from ..intelligence.judge import run_task
 from ..models.provider import LLMUnavailable, Provider
 
@@ -161,7 +161,7 @@ def handover(conn: psycopg.Connection, org: int, provider: Provider, login: str)
         for it in res[k]:
             ids = [i for i in dict.fromkeys(it.get("cites") or []) if i in ev]
             if it["text"].strip() and ids:
-                items.append({"text": it["text"].strip(), "cites": ids, "key": exact(it.get("key", ""), it["text"], max_words=10)})
+                items.append({"text": it["text"].strip(), "cites": ids, "key": highlight(it.get("key", ""), it["text"])})
         sections[k] = items
     used = {i for items in sections.values() for it in items for i in it["cites"]}
     return {"status": "ok", "login": login, "summary": res["summary"], **sections,

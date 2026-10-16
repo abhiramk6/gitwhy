@@ -11,7 +11,7 @@ import json
 import psycopg
 
 from ..intelligence import tasks as T
-from ..intelligence.guards import exact
+from ..intelligence.guards import exact, highlight
 from ..intelligence.judge import run_task
 from ..models.provider import LLMUnavailable, Provider
 from ..retrieval.search import Hit, search_with_meta
@@ -88,7 +88,7 @@ def ask(conn: psycopg.Connection, org: int, provider: Provider, question: str,
         if not text or not ids:
             return None                    # no valid source => the statement is not shown
         src = [t for i in ids for t in (cites[i]["excerpt"], cites[i].get("original") or "")]
-        return {"text": text, "cites": ids, "key": exact(seg.get("key", ""), text, max_words=10),
+        return {"text": text, "cites": ids, "key": highlight(seg.get("key", ""), text),
                 "proof": exact(seg.get("proof", ""), *src, max_words=45)}
 
     answer, used, dropped = [], [], []
