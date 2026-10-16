@@ -16,17 +16,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROTO = ROOT / "eval" / "heldout_protocol.json"
 COVERED = ["backend/app/intelligence/tasks.py", "backend/app/planning/planner.py", "backend/app/retrieval/search.py",
-           "backend/app/knowledge/build_graph.py"]
+           "backend/app/knowledge/build_graph.py", "backend/app/knowledge/judgments.py", "backend/app/retrieval/embed.py",
+           "backend/app/models/voyage.py"]
 
 
 def prompt_hash() -> str:
     sys.path.insert(0, str(ROOT / "backend"))
-    from app.config import Settings
+    from app.config import get_settings
     h = hashlib.sha256()
     for rel in COVERED:
         h.update(rel.encode() + b"\0" + (ROOT / rel).read_bytes() + b"\0")
-    f = Settings.model_fields
-    h.update(json.dumps([f[k].default for k in ("gen_model", "gen_fallback_models", "embed_model")]).encode())
+    cfg = get_settings()   # effective configuration (env included): a run with a different model/provider is a different run
+    h.update(json.dumps([getattr(cfg, k) for k in ("gen_model", "gen_fallback_models", "embed_provider", "embed_model",
+                                                    "voyage_model", "voyage_dim")]).encode())
     return h.hexdigest()
 
 
