@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, setOrg } from '../api.js'
+import { LogoMark } from '../ui.jsx'
 
 const STEPS = ['Organization', 'GitHub', 'Jira', 'Reading']
 
@@ -86,7 +87,7 @@ export default function Onboarding({ me, initial, onReady, onCancel }) {
   return (
     <main className="welcome onboard">
       <div className="welcome-in stack">
-        <div className="row" style={{ justifyContent: 'space-between' }}><div className="brand" style={{ fontSize: 22 }}>Gitwhy</div>
+        <div className="row" style={{ justifyContent: 'space-between' }}><div className="brand"><LogoMark /><b>Gitwhy</b></div>
           {onCancel && step < 3 && <button className="btn quiet small" onClick={onCancel}>Cancel</button>}</div>
         <Steps at={step} />
         {err && <p className="notice err" role="alert">{err}</p>}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import product from '@product'
 import { api, setSession } from '../api.js'
+import { LogoMark } from '../ui.jsx'
 
 export const TEST_ACCOUNT = { email: 'demo@gitwhy.test', password: 'gitwhy-demo-2026' }
 
@@ -21,7 +22,7 @@ export default function Welcome({ onSignedIn }) {
   return (
     <main className="welcome">
       <div className="welcome-in stack">
-        <div className="brand" style={{ fontSize: 22 }}>{product.name}</div>
+        <div className="brand"><LogoMark /><b>{product.name}</b></div>
         <div>
           <h1>{mode === 'signup' ? 'Know why your code is the way it is.' : 'Welcome back.'}</h1>
           <p className="lede">{mode === 'signup'

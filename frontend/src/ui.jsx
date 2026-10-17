@@ -222,3 +222,8 @@ export function useRoute() {
 }
 export const go = (to) => { window.location.hash = `#/${to}` }
 export const copyText = (t) => { try { navigator.clipboard.writeText(t) } catch { /* clipboard unavailable */ } }
+
+/* the logo tile used in the sidebar and on the sign-in and setup pages */
+export const LogoMark = () => (
+  <div className="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v10a4 4 0 0 0 4 4h6M17 6v6" /><circle cx="7" cy="4" r="1.5" fill="#fff" /><circle cx="17" cy="6" r="1.5" fill="#fff" /><circle cx="17" cy="18" r="1.5" fill="#fff" /></svg></div>
+)

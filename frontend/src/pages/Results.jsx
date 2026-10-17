@@ -75,6 +75,14 @@ export default function Results() {
       {r.error && <Problem error={r.error} />}
       {d && (
         <>
+          <div className="metrics">
+            <div className="metric"><span className="pill ok">Measured</span><span className="k">Questions answered with sources</span>
+              <span className="v">{d.measured.questions_answered}<span className="small muted"> of {d.measured.questions_asked}</span></span></div>
+            <div className="metric"><span className="pill ok">Measured</span><span className="k">Median time to a sourced answer (first-time questions)</span>
+              <span className="v">{fmt(d.measured.median_seconds_first_time_question)}</span></div>
+            <div className="metric"><span className="pill ok">Measured</span><span className="k">Repeated issues detected in PR reviews</span>
+              <span className="v">{d.measured.repeated_issues_detected}</span><span className="n">Warnings shown, not “prevented”</span></div>
+          </div>
           <section className="sect"><h2>Measured</h2>
             <table className="tbl"><tbody>
               <tr><td>Questions answered with sources</td><td className="num" style={{ whiteSpace: 'nowrap' }}>{d.measured.questions_answered} of {d.measured.questions_asked}</td></tr>

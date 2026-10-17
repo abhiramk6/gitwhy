@@ -79,7 +79,7 @@ export default function Ask() {
       </div>
       <form className="ask-box" onSubmit={(e) => { e.preventDefault(); submit() }}>
         <label className="sr" htmlFor="q">Your question</label>
-        <textarea id="q" rows={1} value={text} placeholder="Ask about a decision, a rule, or why something is the way it is" onChange={(e) => setText(e.target.value)}
+        <textarea id="q" rows={1} value={text} placeholder="Ask about a decision or a rule" onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }} />
         <button className="btn" type="submit" disabled={text.trim().length < 3}>Ask</button>
       </form>
@@ -92,7 +92,7 @@ export default function Ask() {
         </div>
       )}
       {turns.map((t, i) => (
-        <section key={i} className="sect">
+        <section key={i} className="turn">
           <p className="q">{t.q}</p>
           {t.loading && <Reading>Reading {total.toLocaleString() || 'the'} records and weighing the best sources</Reading>}
           {t.err && <Problem error={t.err} />}
