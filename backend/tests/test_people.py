@@ -64,3 +64,14 @@ def test_poorly_documented_items_follow_the_same_cite_rule(conn, org):
                 "standards_they_set": [], "open_work": [], "people_to_ask": [], "risks": [], "first_week": []}
     out = handover(conn, org, ideal_provider(handover=responder), "dana.okafor")
     assert [i["text"] for i in out["poorly_documented"]] == ["No document found."]
+
+
+def test_same_person_under_git_name_and_login_is_merged_only_when_names_match_exactly(conn, org):
+    ids = [r["id"] for r in conn.execute("SELECT id FROM source_records WHERE organization_id=%s AND source_type='github_commit' "
+                                         "AND payload->>'author'='dana.okafor' ORDER BY id LIMIT 2", (org,))]
+    for rid, name in zip(ids, ("Dana Okafor", "D. Okafor")):
+        conn.execute("UPDATE source_records SET payload=jsonb_set(payload,'{author}',to_jsonb(%s::text)) WHERE id=%s", (name, rid))
+    r = {x["login"]: x for x in roster(conn, org)}
+    assert "Dana Okafor" not in r and r["dana.okafor"]["commits"] == 35   # merged into the login (needs a PR/comment under that login)
+    assert r["D. Okafor"]["commits"] == 1                                  # a looser match is never assumed
+    assert all(not x["bot"] for x in r.values())

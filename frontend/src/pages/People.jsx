@@ -47,8 +47,8 @@ export default function People() {
         <ul className="list" aria-label="People">
           {(list.data || []).map((p) => (
             <li key={p.login}><button className={sel === p.login ? 'on' : ''} onClick={() => { setSel(p.login); setErr(null) }}>
-              <div style={{ fontWeight: 500 }}>{full(p.login)}</div>
-              <div className="small muted">Last active {ago(p.last_active)}</div>
+              <div style={{ fontWeight: 500 }}>{full(p.login)}{p.bot && <span className="small muted"> · bot</span>}</div>
+              <div className="small muted">{p.bot ? 'Automated account' : `Last active ${ago(p.last_active)}`}</div>
             </button></li>
           ))}
         </ul>

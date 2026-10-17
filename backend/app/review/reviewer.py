@@ -123,6 +123,9 @@ def build_packet(conn: psycopg.Connection, org_id: int, provider: Provider, repo
                 (f["scope"] == "org" or f["repository_id"] == repo_id):
             src = conn.execute("SELECT body, payload FROM source_records WHERE organization_id=%s AND source_type=%s AND "
                                "source_id=%s", (org_id, f["source_type"], f["source_id"])).fetchone()
+            said = ((src or {}).get("payload") or {}).get("date")
+            if (said and payload.get("merged_at") and said >= payload["merged_at"]) or str(f["object_value"]).startswith(f"{repo}#{number}/"):
+                continue  # guidance is only "earlier" if it was said before this PR merged, and never from this PR's own thread
             eid = ev.add(f"fact:{f['id']}", "review_guidance", f["summary"], f["source_url"], f["evidence_type"], f["status"])
             guidance_text[eid] = (src or {}).get("body") or f["summary"]
             earlier[eid] = {"kind": "review", "who": ((src or {}).get("payload") or {}).get("author"),

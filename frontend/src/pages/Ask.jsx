@@ -79,7 +79,7 @@ export default function Ask() {
       </div>
       <form className="ask-box" onSubmit={(e) => { e.preventDefault(); submit() }}>
         <label className="sr" htmlFor="q">Your question</label>
-        <textarea id="q" rows={1} value={text} placeholder="How should I paginate a new list endpoint?" onChange={(e) => setText(e.target.value)}
+        <textarea id="q" rows={1} value={text} placeholder="Ask about a decision, a rule, or why something is the way it is" onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }} />
         <button className="btn" type="submit" disabled={text.trim().length < 3}>Ask</button>
       </form>

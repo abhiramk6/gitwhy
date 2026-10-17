@@ -56,7 +56,7 @@ export default function Plan() {
         <p className="lede">The services it touches (including ones you did not name), the decisions that apply, what can be reused, and an ordered task list, each with its source.</p></div>
       <div className="stack-s">
         <label className="sr" htmlFor="req">Feature request</label>
-        <textarea id="req" className="plain" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+        <textarea id="req" className="plain" rows={3} placeholder="Describe the feature you want to build, for example: add a timeout option to the database query" value={text} onChange={(e) => setText(e.target.value)} />
         <div className="row"><button className="btn" onClick={run} disabled={busy || text.trim().length < 8}>{busy ? 'Planning…' : 'Plan it'}</button>
           {org && EXAMPLES[org.slug] && <button className="btn quiet" onClick={() => setText(EXAMPLES[org.slug])}>Use the example</button>}</div>
       </div>

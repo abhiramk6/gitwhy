@@ -15,9 +15,25 @@ from ..intelligence.judge import run_task
 from ..models.provider import LLMUnavailable, Provider
 
 
+def _key(name: str) -> str:
+    return "".join(ch for ch in (name or "").lower() if ch.isalnum())
+
+
 def _commits(conn, org):
-    return [r["payload"] for r in conn.execute(
-        "SELECT payload FROM source_records WHERE organization_id=%s AND source_type='github_commit'", (org,))]
+    """Commit payloads. A git author name that equals a GitHub login once case, spaces and punctuation are ignored
+    ("Kenneth Reitz" and "kennethreitz") is the same person, so it is counted under the login. Anything looser is not merged."""
+    logins: dict[str, str] = {}
+    for r in conn.execute("SELECT payload->>'author' AS a FROM source_records WHERE organization_id=%s AND "
+                          "source_type IN ('github_pr','github_comment') AND payload->>'author' IS NOT NULL GROUP BY 1", (org,)):
+        logins.setdefault(_key(r["a"]), r["a"])
+    out = []
+    for r in conn.execute("SELECT payload FROM source_records WHERE organization_id=%s AND source_type='github_commit'", (org,)):
+        c = dict(r["payload"])
+        known = logins.get(_key(c.get("author") or ""))
+        if known:
+            c["author"] = known
+        out.append(c)
+    return out
 
 
 def _people_names(conn, org) -> dict[str, dict]:
@@ -55,8 +71,8 @@ def roster(conn: psycopg.Connection, org: int) -> list[dict]:
             guidance[a["a"]] += 1
     names = set(commits) | set(prs) | set(comments) | set(tickets)
     return sorted(({"login": n, "commits": commits[n], "prs": prs[n], "comments": comments[n], "tickets": tickets[n],
-                    "guidance": guidance[n], "last_active": last.get(n)} for n in names),
-                  key=lambda x: -(x["commits"] + x["prs"] + 3 * x["comments"] + 5 * x["guidance"]))
+                    "guidance": guidance[n], "last_active": last.get(n), "bot": n.lower().endswith("[bot]")} for n in names),
+                  key=lambda x: (x["bot"], -(x["commits"] + x["prs"] + 3 * x["comments"] + 5 * x["guidance"])))
 
 
 ACTIVE_DAYS = 120

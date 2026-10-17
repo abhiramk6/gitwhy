@@ -178,3 +178,24 @@ def test_diff_parsing():
     assert diffs.locate({"a.py": patch}, "NEW  two") == ("a.py", 12, "new two")
     assert diffs.locate({"a.py": patch}, "old") is None and diffs.locate({"a.py": patch}, "ctx") is None
     assert diffs.claims_a_line("see line 42") and not diffs.claims_a_line("the outline of it")
+
+
+def test_guidance_is_earlier_only_if_said_before_the_pr_and_not_in_its_own_thread(conn):
+    cid = "payments-api#6/review_comment-9001"
+
+    def guidance(p):
+        return {"guidance": [{"id": cid, "topic": "pagination", "guidance": "Use cursors.", "scope": "org",
+                              "reason": "skipped rows", "quote": "Please don't add offset pagination"}]} if any(x["id"] == cid for x in p["comments"]) else {"guidance": []}
+
+    org_id, _ = ingest(conn, FIX)
+    build(conn, org_id, ideal_provider(choose=lambda p: ["payments-api"], review_guidance=guidance))
+    seen = []
+
+    def responder(p):
+        seen.append([g["id"] for g in p["team_guidance"]])
+        return {"comments": [], "nothing_to_say": True}
+    draft_review(conn, org_id, provider(responder), "payments-api", 11)   # merged after the thread: guidance is offered
+    draft_review(conn, org_id, provider(responder), "payments-api", 6)    # the thread's own PR: never offered
+    conn.execute("UPDATE source_records SET payload = jsonb_set(payload, '{merged_at}', '\"2026-05-01\"') WHERE source_id='payments-api#11'")
+    draft_review(conn, org_id, provider(responder), "payments-api", 11)   # merged before the thread was written: not "earlier"
+    assert len(seen[0]) == 1 and seen[1] == [] and seen[2] == []
