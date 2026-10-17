@@ -212,12 +212,12 @@ def build_fixture(root: Path, slug: str, name: str, repos: list[str], token: str
                 linked += [f"{k}-{n}" for k, n in tkt.findall(f"{p['title']} {body} {p['head']['ref']}")]
             files = pr_files.get(p["number"])
             try:
-                patches, names, cut = pr_patches(full, p["number"], token)
+                patches, changed, cut = pr_patches(full, p["number"], token)
             except GitHubError:
-                patches, names, cut = {}, [], 0
+                patches, changed, cut = {}, [], 0
                 drop("pr_diff_unavailable")
             if files is None:
-                files = [n for n in names if n in copied]
+                files = [n for n in changed if n in copied]
             if cut:
                 drop("pr_diff_truncated")
             prs_all.append({"repo": rname, "number": p["number"], "title": p["title"], "body": body, "author": (p.get("user") or {}).get("login"),
