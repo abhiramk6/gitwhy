@@ -1,3 +1,1 @@
-Running (resumed 2026-10-16 10:50 UTC at the owner's word): Voyage embedding pass for oss-pallets (free tier, 2 req/min), API servers :8000 Northwind / :8001 OSS, hourly updater, watchdog, graph rebuild for oss-pallets (tmux window graph).
-Next, in order: (1) when the pass ends: ops/embed_pass.sh oss-pallets once more for facts/comments changed by the graph rebuild, then ops/embed_pass.sh northwind; (2) Postgres rename (database+role to gitwhy) with api/pass windows stopped, update db.env + config default; (3) rerun dev-only partial B -> then complete B only after 100% coverage AND an explicit owner yes to freeze prompts; (4) stronger-model comparison when 3.8/3.7 quota resets.
-Never run anything that embeds queries (evals, probes) while a pass is running: shared 3 req/min limit.
+Waiting for the owner's OK on the redesign check, then the OSS dev-list review, an explicit yes before freezing prompts and the held-out run, and GCP access at the end.

@@ -16,6 +16,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+_VENV_PY = ROOT / "backend/.venv/bin/python"
+if _VENV_PY.exists() and Path(sys.prefix).resolve() != (ROOT / "backend/.venv").resolve():
+    os.execv(str(_VENV_PY), [str(_VENV_PY), *sys.argv])   # started with the system python: re-run under the venv that has psycopg
 sys.path.insert(0, str(ROOT / "backend"))
 STATE = Path.home() / ".config/gitwhy/hourly_state.json"
 MODEL = "voyage-4-large"   # OSS corpus embedding model (Voyage AI); the Gemini embedding plan was abandoned 2026-10-16
@@ -33,47 +36,66 @@ def waiting_on_owner() -> list[str]:
     return [] if not lines or lines[0].startswith("_none") else lines
 
 
-def snapshot() -> dict:
-    from app.db import connect
-    from app.retrieval.embed import coverage_text, tier_coverage
+def _up(cmd: list[str]) -> bool:
+    return subprocess.run(cmd, capture_output=True, text=True).stdout.strip() == "active"
 
+
+def snapshot() -> dict:
+    import urllib.request
+
+    from app.db import connect
+    from app.retrieval.embed import tier_coverage
+
+    orgs = []
     with connect() as c:
-        org = c.execute("SELECT id FROM organizations WHERE slug='oss-pallets'").fetchone()["id"]
-        rows = tier_coverage(c, org, MODEL)
+        for o in c.execute("SELECT id, slug FROM organizations WHERE status='ready' ORDER BY id").fetchall():
+            rows = tier_coverage(c, o["id"], MODEL)
+            wanted = sum(r["wanted"] for r in rows)
+            stored = sum(r["stored"] for r in rows)
+            if wanted and stored:   # only orgs that have a search index (orgs onboarded without one are not listed)
+                orgs.append((o["slug"], stored, wanted))
         q = c.execute("SELECT exhausted_until, note FROM quota_state WHERE model=%s", (MODEL,)).fetchone()
-        used = c.execute("SELECT coalesce(sum(items),0) n FROM embed_usage WHERE model=%s AND kind='index' "
-                         "AND day=(now() AT TIME ZONE 'utc')::date", (MODEL,)).fetchone()["n"]
     wins = subprocess.run(["tmux", "list-windows", "-t", "gitwhy", "-F", "#{window_name}"], capture_output=True, text=True).stdout.split()
-    alive = "voyage" in wins            # the Voyage pass runs in tmux window gitwhy:voyage
-    stored, wanted = sum(r["stored"] for r in rows), sum(r["wanted"] for r in rows)
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:8080/api/meta", timeout=10) as r:
+            site = r.status
+    except Exception:
+        site = 0
     until = q["exhausted_until"] if q and q["exhausted_until"] > datetime.now(timezone.utc) else None
-    return {"stored": stored, "wanted": wanted, "tiers": coverage_text(rows), "alive": alive,
-            "until": until.strftime("%b %d %H:%M UTC") if until else None, "used_today": used,
-            "note": (q or {}).get("note"), "head": git("rev-parse", "HEAD"),
+    return {"orgs": [list(o) for o in orgs], "stored": sum(o[1] for o in orgs), "wanted": sum(o[2] for o in orgs),
+            "alive": any(w.startswith(("voyage", "embed")) for w in wins), "site": site,
+            "services": _up(["systemctl", "is-active", "gitwhy"]) and _up(["systemctl", "is-active", "caddy"]),
+            "until": until.strftime("%b %d %H:%M UTC") if until else None, "note": (q or {}).get("note"), "head": git("rev-parse", "HEAD"),
             "next": (ROOT / "ops/NEXT.txt").read_text().strip() if (ROOT / "ops/NEXT.txt").exists() else "",
             "waiting": waiting_on_owner()}
 
 
+def _cut(text: str, n: int = 150) -> str:
+    text = " ".join(text.replace("**", "").split())
+    return text if len(text) <= n else text[: n - 1].rstrip() + "…"
+
+
 def compose(cur: dict, prev: dict | None) -> str:
     now = datetime.now(timezone.utc).strftime("%H:%M UTC")
-    state = ("Voyage embedding pass " + ("running" if cur["alive"] else "not running")
-             + (f", waiting until {cur['until']}" if cur["until"] else ""))
-    if prev and all(cur[k] == prev.get(k) for k in ("stored", "head", "next", "waiting", "note", "alive")):
-        extra = f" Waiting on you: {'; '.join(cur['waiting'])}" if cur["waiting"] else ""
-        return f"{now} — No change since last update. Coverage {cur['stored']} of {cur['wanted']} chunks; {state}.{extra}"
+    health = (f"site {'up' if cur['site'] == 200 else 'DOWN (HTTP %s)' % cur['site']}, services {'active' if cur['services'] else 'NOT ACTIVE'}"
+              + (", embedding pass running" if cur["alive"] else "") + (f", embedding limit until {cur['until']}" if cur["until"] else ""))
+    index = ", ".join(f"{slug} {a}/{b}" for slug, a, b in cur["orgs"]) or "no orgs indexed"
+    wait = _cut("; ".join(w.lstrip("- ").split(" — ")[0].split(":")[0] for w in cur["waiting"][:3]), 150) if cur["waiting"] else "nothing"
+    if prev and all(cur[k] == prev.get(k) for k in ("stored", "head", "next", "waiting", "alive", "site", "services")):
+        return _cut(f"{now} — No change. {health}. Search index {index}. Waiting on you: {wait}.", 300)
     new = git("log", "--format=%s", f"{prev['head']}..HEAD") if prev and prev.get("head") else ""
     done = [l for l in new.splitlines() if l][:2]
-    lines = [f"{now} — Running: {state}.",
-             f"Coverage: {cur['stored']} of {cur['wanted']} chunks ({cur['tiers']}).",
-             "Done since last update: " + ("; ".join(d[:70] for d in done) if done else "no new commits") + ".",
-             "Blocked / waiting on you: " + ("; ".join(cur["waiting"]) if cur["waiting"] else "nothing")
-             + (f"; NOTE: {cur['note']}" if cur["note"] and "EARLY" in cur["note"].upper() else "") + ".",
-             f"Next: {(cur['next'] or 'continue current work').rstrip('.')}."]
+    lines = [f"{now} — {health}.",
+             f"Search index: {index}.",
+             "Done since last update: " + ("; ".join(_cut(d, 70) for d in done) if done else "no new commits") + ".",
+             f"Waiting on you: {wait}.",
+             f"Next: {_cut(cur['next'].splitlines()[0] if cur['next'] else 'continue current work', 150).rstrip('.')}."]
     return "\n".join(lines)
 
 
 def main() -> int:
     once = "--once" in sys.argv
+    last_error = None
     while True:
         try:
             prev = json.loads(STATE.read_text()) if STATE.exists() else None
@@ -84,9 +106,14 @@ def main() -> int:
             else:
                 subprocess.run([str(ROOT / "ops/notify.sh"), msg], capture_output=True)
                 STATE.write_text(json.dumps(cur))
-        except Exception as exc:  # never die silently: say so once and keep the schedule
-            subprocess.run([str(ROOT / "ops/notify.sh"), f"hourly update failed to compose: {type(exc).__name__}: {str(exc)[:120]}"],
-                           capture_output=True)
+            last_error = None
+        except Exception as exc:  # never die silently: say so once per distinct error and keep the schedule
+            err = f"hourly update failed to compose: {type(exc).__name__}: {str(exc)[:120]}"
+            if "--dry" in sys.argv:
+                print(err)
+            elif err != last_error:
+                subprocess.run([str(ROOT / "ops/notify.sh"), err], capture_output=True)
+            last_error = err
         if once:
             return 0
         time.sleep(INTERVAL)

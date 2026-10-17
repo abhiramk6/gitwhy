@@ -5,8 +5,8 @@ repeated (not re-sent) in each hourly update until answered.
 
 ## Waiting on owner
 - **Review of the OSS dev lists** — owner: "will take time". Until then they stay labelled agent-confirmed, not human-reviewed.
-- **Build real onboarding?** (GitHub connector with full history + incremental sync, multi-project Jira, org settings screen, org switcher, basic login; ~2-3 days) and in what order: asked 2026-10-16 ~10:50; the owner's last reply did not address it. Asked again once.
-- **Freeze prompts, then the real B and the single held-out run:** the owner replied "sure" to a list item that included it; because freezing is irreversible I will show the hash and ask for one explicit yes at that moment. Nothing runs before.
+- **Freeze prompts, then the real B and the single held-out run:** needs one explicit yes from the owner; I will show the freeze hash first. Nothing runs before.
+- **Redesign check** — new look is live; owner to look and reply.
 
 Later: GCP access from the owner after everything else is done.
 
