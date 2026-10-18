@@ -1,5 +1,5 @@
 # One image: React build served by the FastAPI service; same image runs the seed/ingest Cloud Run Job.
-FROM node:20-slim AS ui
+FROM node:26-slim AS ui
 WORKDIR /ui
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
