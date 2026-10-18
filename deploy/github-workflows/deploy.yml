@@ -1,0 +1,60 @@
+name: Deploy to Cloud Run
+
+# Runs after CI passes on main, or by hand. It does nothing until the repository variables below are set,
+# so it is safe to keep in the repository before the Google Cloud side exists.
+#   Variables: GCP_PROJECT_ID, GCP_REGION (default us-central1), GCP_WIF_PROVIDER, GCP_SERVICE_ACCOUNT
+#   Auth: Workload Identity Federation (no long-lived key is stored in GitHub).
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    if: >-
+      vars.GCP_PROJECT_ID != '' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+      SERVICE: gitwhy-app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build image with Cloud Build
+        run: |
+          gcloud builds submit --project "$PROJECT" \
+            --config deploy/cloud-build/cloudbuild.yaml \
+            --substitutions "_REGION=$REGION,SHORT_SHA=${GITHUB_SHA::7}" .
+      - name: Deploy (keeps the service's existing env vars and secrets)
+        run: |
+          gcloud run deploy "$SERVICE" --project "$PROJECT" --region "$REGION" \
+            --image "$REGION-docker.pkg.dev/$PROJECT/gitwhy/app:${GITHUB_SHA::7}"
+      - name: Smoke test
+        run: |
+          url=$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION" --format 'value(status.url)')
+          for i in $(seq 1 15); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$url/api/meta" || true)
+            [ "$code" = 200 ] && { echo "healthy: $url"; exit 0; }
+            sleep 4
+          done
+          echo "service did not become healthy"; exit 1
