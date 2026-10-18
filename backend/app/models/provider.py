@@ -251,6 +251,30 @@ class GeminiProvider:
         raise RuntimeError(f"no model produced a valid answer: {type(last).__name__}: {str(last)[:200]}")
 
 
+class VertexEmbedder(GeminiProvider):
+    """Embeddings from Vertex AI (paid from the project's credit, so no free-tier pacing or daily caps).
+
+    Vertex takes ONE text per request for gemini-embedding-001, so texts are sent alone, several at a time."""
+    PARALLEL = 8
+    has_llm = False
+
+    def _embed_once(self, texts: list[str], query: bool = False) -> list[list[float]]:
+        from concurrent.futures import ThreadPoolExecutor
+
+        from google.genai import types
+
+        cfg = types.EmbedContentConfig(output_dimensionality=EMBED_DIM,
+                                       task_type="RETRIEVAL_QUERY" if query else "RETRIEVAL_DOCUMENT")
+
+        def one(text: str) -> list[float]:
+            got = self._call(lambda: self._client.models.embed_content(model=self.embed_model, contents=[text],
+                                                                       config=cfg)).embeddings
+            return _unit(got[0].values)
+
+        with ThreadPoolExecutor(self.PARALLEL) as ex:
+            return list(ex.map(one, texts))
+
+
 def _unit(v) -> list[float]:
     """Reduced-dimension Gemini embeddings are not unit length; normalise so cosine distance is well behaved."""
     n = math.sqrt(sum(x * x for x in v)) or 1.0
@@ -279,6 +303,10 @@ def make_provider(settings) -> Provider:
         emb = VoyageEmbedder(settings.voyage_api_key, settings.voyage_model, settings.voyage_dim,
                              settings.voyage_tokens_per_min, settings.voyage_request_tokens,
                              settings.voyage_requests_per_min)
+        return _ComposedProvider(llm, emb)
+    if getattr(settings, "embed_provider", "gemini") == "vertex":
+        emb = VertexEmbedder(project=settings.gcp_project, location=settings.gcp_location,
+                             embed_model=settings.vertex_embed_model)
         return _ComposedProvider(llm, emb)
     return llm
 

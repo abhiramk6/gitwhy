@@ -44,7 +44,9 @@ class Settings(BaseSettings):
     sync_max_commits: int = 300
     # Embeddings may come from a different provider than generation. "voyage" = Voyage AI (free 200M tokens/account).
     # Voyage dims are 256/512/1024/2048 (not 768); a new model means a new corpus, never mixed with another model's vectors.
+    # "vertex" = Vertex AI embeddings, billed to the cloud project (needs GCP_PROJECT and application default credentials).
     embed_provider: str = "gemini"
+    vertex_embed_model: str = "gemini-embedding-001"
     voyage_api_key: str = ""
     voyage_model: str = "voyage-4-large"
     voyage_dim: int = 1024
