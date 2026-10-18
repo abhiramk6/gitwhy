@@ -95,3 +95,27 @@ def test_a_request_over_the_token_limit_is_halved_not_failed(fake_vertex):
     assert len(out) == 7 and all(_unit(v) for v in out)
     firsts = [round(v[0], 6) for v in out]
     assert firsts == sorted(firsts)   # texts were sent in order, so vectors still line up with them
+
+
+def test_one_huge_text_is_capped_so_it_cannot_sink_the_request(fake_vertex):
+    prov = _provider()
+    out = prov.embed(["small", "y" * 100_000, "also small"])
+    assert len(out) == 3 and all(_unit(v) for v in out)
+    sent = [t for c in _FakeClient.last.models.calls for t in c[1]]
+    assert max(len(t) for t in sent) <= P.VertexEmbedder.MAX_TEXT_CHARS
+
+
+def test_a_lone_text_still_over_the_limit_is_shortened_until_it_fits(fake_vertex):
+    from google.genai import errors
+
+    prov = _provider()
+    real = _FakeClient.last.models.embed_content
+
+    def strict(model, contents, config):
+        if len(contents[0]) > 1_500:
+            raise errors.ClientError(400, {"error": {"message": "input token count is 23060 but the model supports up to 20000"}}, None)
+        return real(model, contents, config)
+
+    _FakeClient.last.models.embed_content = strict
+    out = prov.embed(["z" * 8_000])
+    assert len(out) == 1 and _unit(out[0])

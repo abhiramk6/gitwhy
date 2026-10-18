@@ -261,6 +261,7 @@ class VertexEmbedder(GeminiProvider):
     has_llm = False
     EMBED_MIN_INTERVAL_S = 7.0       # ~8 requests a minute, under the observed quota
     EMBED_REQUEST_CHARS = 30_000     # code runs near 2 chars/token, and a request may hold at most 20k tokens
+    MAX_TEXT_CHARS = 8_000           # the model reads only the first 2,048 tokens of a text; one huge chunk must not sink a request
     QUOTA_RETRIES = 6
 
     def _embed_batch(self, batch: list[str], cfg) -> list[list[float]]:
@@ -275,6 +276,8 @@ class VertexEmbedder(GeminiProvider):
             if getattr(exc, "code", None) == 400 and len(batch) > 1:
                 mid = len(batch) // 2
                 return self._embed_batch(batch[:mid], cfg) + self._embed_batch(batch[mid:], cfg)
+            if getattr(exc, "code", None) == 400 and len(batch[0]) > 500:   # one text still over the limit: shorten it
+                return self._embed_batch([batch[0][: len(batch[0]) // 2]], cfg)
             raise
         if len(got) != len(batch):
             raise RuntimeError(f"embedding count mismatch: sent {len(batch)}, got {len(got)}")
@@ -287,6 +290,7 @@ class VertexEmbedder(GeminiProvider):
 
         cfg = types.EmbedContentConfig(output_dimensionality=EMBED_DIM,
                                        task_type="RETRIEVAL_QUERY" if query else "RETRIEVAL_DOCUMENT")
+        texts = [t[: self.MAX_TEXT_CHARS] for t in texts]
         if not self.embed_model.startswith("gemini-embedding"):
             out: list[list[float]] = []
             for batch in self._requests(texts):
