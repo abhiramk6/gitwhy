@@ -34,7 +34,10 @@ def save_secrets(slug: str, **kv) -> None:
     cur = json.loads(p.read_text()) if p.exists() else {}
     cur.update({k: v for k, v in kv.items() if v})
     p.write_text(json.dumps(cur))
-    p.chmod(0o600)
+    try:
+        p.chmod(0o600)
+    except OSError:  # object-storage mounts (Cloud Run) have no file modes; access is the bucket's IAM
+        pass
 
 
 def load_secrets(slug: str) -> dict:
