@@ -254,9 +254,14 @@ class GeminiProvider:
 class VertexEmbedder(GeminiProvider):
     """Embeddings from Vertex AI (paid from the project's credit, so no free-tier pacing or daily caps).
 
-    Vertex takes ONE text per request for gemini-embedding-001, so texts are sent alone, several at a time."""
-    PARALLEL = 8
+    text-embedding-005 (default) takes many texts per request. A new account's request quota is small (about ten a
+    minute), so requests are batched up to the 20k-token limit and paced. gemini-embedding-001 takes ONE text per
+    request, so its texts are sent alone."""
+    PARALLEL = 2
     has_llm = False
+    EMBED_MIN_INTERVAL_S = 7.0       # ~8 requests a minute, under the observed quota
+    EMBED_REQUEST_CHARS = 48_000     # under 20k tokens per request even for code (3 chars/token)
+    QUOTA_RETRIES = 6
 
     def _embed_once(self, texts: list[str], query: bool = False) -> list[list[float]]:
         from concurrent.futures import ThreadPoolExecutor
@@ -265,6 +270,16 @@ class VertexEmbedder(GeminiProvider):
 
         cfg = types.EmbedContentConfig(output_dimensionality=EMBED_DIM,
                                        task_type="RETRIEVAL_QUERY" if query else "RETRIEVAL_DOCUMENT")
+        if not self.embed_model.startswith("gemini-embedding"):
+            out: list[list[float]] = []
+            for batch in self._requests(texts):
+                self._pace()
+                got = self._call(lambda: self._client.models.embed_content(model=self.embed_model, contents=batch,
+                                                                           config=cfg)).embeddings
+                if len(got) != len(batch):
+                    raise RuntimeError(f"embedding count mismatch: sent {len(batch)}, got {len(got)}")
+                out.extend(_unit(e.values) for e in got)
+            return out
 
         def one(text: str) -> list[float]:
             got = self._call(lambda: self._client.models.embed_content(model=self.embed_model, contents=[text],
