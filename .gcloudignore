@@ -1,0 +1,18 @@
+# What `gcloud builds submit` uploads: only what the Dockerfile copies.
+.git
+.github
+**/.venv
+**/node_modules
+**/__pycache__
+frontend/dist
+data/
+submission/
+reviews/
+eval/
+docs/
+scripts/
+ops/
+deploy/
+*.env
+*.log
+*.dump
