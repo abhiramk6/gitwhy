@@ -76,3 +76,22 @@ def test_queries_use_the_query_task_type(fake_vertex):
     prov = _provider()
     prov.embed(["why cursor pagination"], query=True)
     assert _FakeClient.last.models.calls[-1][2] == "RETRIEVAL_QUERY"
+
+
+def test_a_request_over_the_token_limit_is_halved_not_failed(fake_vertex):
+    from google.genai import errors
+
+    prov = _provider()
+    real = _FakeClient.last.models.embed_content
+
+    def limited(model, contents, config):
+        if len(contents) > 2:   # pretend anything over two texts is over the 20k-token limit
+            raise errors.ClientError(400, {"error": {"message": "input token count is 23060 but the model supports up to 20000"}}, None)
+        return real(model, contents, config)
+
+    _FakeClient.last.models.embed_content = limited
+    texts = ["t" * n for n in range(1, 8)]
+    out = prov.embed(texts)
+    assert len(out) == 7 and all(_unit(v) for v in out)
+    firsts = [round(v[0], 6) for v in out]
+    assert firsts == sorted(firsts)   # texts were sent in order, so vectors still line up with them

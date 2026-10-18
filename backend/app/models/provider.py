@@ -260,8 +260,25 @@ class VertexEmbedder(GeminiProvider):
     PARALLEL = 2
     has_llm = False
     EMBED_MIN_INTERVAL_S = 7.0       # ~8 requests a minute, under the observed quota
-    EMBED_REQUEST_CHARS = 48_000     # under 20k tokens per request even for code (3 chars/token)
+    EMBED_REQUEST_CHARS = 30_000     # code runs near 2 chars/token, and a request may hold at most 20k tokens
     QUOTA_RETRIES = 6
+
+    def _embed_batch(self, batch: list[str], cfg) -> list[list[float]]:
+        """One request; if it is over the model's token limit (400), halve it and try again."""
+        from google.genai import errors
+
+        self._pace()
+        try:
+            got = self._call(lambda: self._client.models.embed_content(model=self.embed_model, contents=batch,
+                                                                       config=cfg)).embeddings
+        except errors.ClientError as exc:
+            if getattr(exc, "code", None) == 400 and len(batch) > 1:
+                mid = len(batch) // 2
+                return self._embed_batch(batch[:mid], cfg) + self._embed_batch(batch[mid:], cfg)
+            raise
+        if len(got) != len(batch):
+            raise RuntimeError(f"embedding count mismatch: sent {len(batch)}, got {len(got)}")
+        return [_unit(e.values) for e in got]
 
     def _embed_once(self, texts: list[str], query: bool = False) -> list[list[float]]:
         from concurrent.futures import ThreadPoolExecutor
@@ -273,12 +290,7 @@ class VertexEmbedder(GeminiProvider):
         if not self.embed_model.startswith("gemini-embedding"):
             out: list[list[float]] = []
             for batch in self._requests(texts):
-                self._pace()
-                got = self._call(lambda: self._client.models.embed_content(model=self.embed_model, contents=batch,
-                                                                           config=cfg)).embeddings
-                if len(got) != len(batch):
-                    raise RuntimeError(f"embedding count mismatch: sent {len(batch)}, got {len(got)}")
-                out.extend(_unit(e.values) for e in got)
+                out.extend(self._embed_batch(batch, cfg))
             return out
 
         def one(text: str) -> list[float]:
