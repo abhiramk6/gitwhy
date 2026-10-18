@@ -203,7 +203,7 @@ export function Proof({ items, max = 2 }) {
 }
 
 /* ---------- small shared bits ---------- */
-export function Reading({ children }) { return <div className="reading" role="status"><span className="sr">{children}</span><i /><i /><i /></div> }
+export function Reading({ children }) { return <div className="reading" role="status"><span className="why">{children}</span><i /><i /><i /></div> }
 export function Problem({ error }) {
   const quota = /quota|429|exhaust/i.test(error?.message || '')
   return (

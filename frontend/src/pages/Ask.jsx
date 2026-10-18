@@ -28,7 +28,7 @@ function Answer({ res }) {
     '', ...(res.citations || []).map((c) => `- ${c.title}${c.url ? ` (${c.url})` : ''}`)].join('\n')
   const trust = (res.citations || []).some((c) => c.status === 'superseded') ? 'superseded' : (res.citations || []).every((c) => c.label !== 'inferred') ? '' : 'inferred'
   return (
-    <div className="stack-s">
+    <div className="stack-s answer-in">
       {res.status === 'insufficient' && <p className="notice">No source backs this up, so we're not saying it. {res.note}</p>}
       {res.status === 'llm_required' && <p className="notice err">The write-up is down; search still works. Try again shortly. {res.note}</p>}
       {res.status === 'partial' && <p className="notice">Part of this is supported by the sources. The rest is left out, not guessed.</p>}

@@ -82,7 +82,7 @@ function Shell({ me, onSwitch, onSignOut }) {
         </div>
       </aside>
       <div className={`work${col.sel ? ' open' : ''}`}>
-        <main className={`surface${wide ? ' wide' : ''}`}><div className="wrap"><Current q={q} /></div></main>
+        <main className={`surface${wide ? ' wide' : ''}`}><div className="wrap"><div className="view" key={page}><Current q={q} /></div></div></main>
         <Column go={go} />
       </div>
     </div>
