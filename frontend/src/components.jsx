@@ -15,7 +15,7 @@ export function useAsync(fn, deps = []) {
 }
 
 export function Async({ state, empty, children }) {
-  if (state.loading && !state.data) return <div className="state" role="status">Loading…</div>
+  if (state.loading && !state.data) return <div className="reading" role="status"><span className="sr">Loading</span><i /><i /><i /></div>
   if (state.error) {
     return (
       <div className="state error" role="alert">
